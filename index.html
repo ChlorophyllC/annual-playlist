@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>年度歌单 · 设计工作室</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header><p class="eyebrow">ANNUAL PLAYLIST / DESIGN STUDIO</p><h1>这一年的音乐，<em>你的封面故事。</em></h1><p class="intro">选一种表达，让喜欢的音乐留在画面里。</p></header>
+    <section class="studio" aria-label="海报设计">
+      <aside class="design-controls">
+        <label for="chart-type">榜单类型</label><select id="chart-type"><option value="songs">歌曲榜</option><option value="albums">专辑榜</option></select>
+        <p id="album-summary" class="hint" aria-live="polite" hidden></p>
+        <p class="eyebrow">01 / THEME</p><h2>选择你的风格</h2>
+        <div id="theme-options"></div>
+        <div id="editorial-colors" hidden><label for="editorial-palette">杂志撞色</label><select id="editorial-palette"><option value="acid">黄绿 / 桃红</option><option value="coral">珊瑚红 / 天蓝</option><option value="violet">紫罗兰 / 柠檬黄</option><option value="mint">薄荷绿 / 莓红</option><option value="custom">自定义</option></select><div class="color-pickers"><label>底色<input id="editorial-bg" type="color" value="#ddf23b"></label><label>强调色<input id="editorial-accent" type="color" value="#da2578"></label></div><button id="pick-color" class="ghost" type="button" hidden>从屏幕取强调色</button></div>
+        <label for="poster-title">榜单标题</label><input id="poster-title" maxlength="60" value="SOTY 2026">
+        <label for="poster-signature">署名</label><input id="poster-signature" maxlength="40" placeholder="你的名字" value="MY YEAR IN MUSIC">
+        <label for="poster-ratio">画布比例</label><select id="poster-ratio"><option value="portrait">3:4 · 竖版海报</option><option value="square">1:1 · 方形封面</option><option value="wide">16:9 · 横版画面</option></select>
+        <label for="poster-cover-mode">封面显示</label><select id="poster-cover-mode"><option value="square">1:1 方形 · 完整显示</option><option value="fill">填满格子 · 居中裁切</option></select>
+        <label class="check-label"><input id="poster-labels" type="checkbox" checked> 显示作品名与音乐人</label>
+        <p class="hint">封面显示方式不改变画布比例。排名按歌单原顺序，完整榜单自动分页。</p>
+        <p class="hint">点击海报中的文字即可修改，按 Enter 完成，Esc 撤销本次编辑。修改排名文字不会移动歌曲。</p>
+        <button id="reset-poster-text" class="ghost" type="button">恢复当前榜单默认文字</button>
+        <hr class="export-divider">
+        <p class="eyebrow">02 / EXPORT</p>
+        <label for="export-format">图片格式</label><select id="export-format"><option value="png">PNG · 无损图片</option><option value="jpeg">JPG · 较小文件</option></select>
+        <label for="export-quality">分辨率</label><select id="export-quality"><option value="1600">普通 · 长边 1600 px</option><option value="3200">高清 · 长边 3200 px</option></select>
+        <label for="export-scope">导出范围</label><select id="export-scope"><option value="current">当前页</option><option value="all">全部分页 · ZIP 下载</option></select>
+        <label for="export-art">画面内容</label><select id="export-art"><option value="covers">封面与文字</option><option value="text">纯文字 · 保留主题</option></select>
+        <button id="export-button" class="export-button" type="button">导出图片 ↓</button>
+        <p id="export-status" class="hint" role="status" aria-live="polite"></p>
+        <div id="export-downloads"></div>
+        <hr class="export-divider">
+        <p class="eyebrow">04 / PROJECT</p>
+        <button id="project-export" class="export-button" type="button">下载工程文件 ↓</button>
+        <label class="project-import-label" for="project-import">导入工程文件</label><input id="project-import" type="file" accept="application/json,.json">
+        <p id="project-status" class="hint" role="status"></p>
+        <hr class="export-divider">
+        <p class="eyebrow">03 / TEXT</p>
+        <button id="text-export-button" class="export-button" type="button">保存纯文字版 ↓</button>
+        <p id="text-export-status" class="hint" role="status"></p>
+      </aside>
+      <div class="preview-area"><div class="preview-toolbar"><span id="preview-source">正在准备样稿…</span><span>静态预览</span></div><div class="sort-toolbar"><button id="sort-toggle" type="button" aria-pressed="false">开始排序</button><span id="sort-info" aria-live="polite"></span></div><div id="poster-mount"></div><div class="page-controls"><button id="page-prev" class="ghost" aria-label="上一页">←</button><span id="page-info" aria-live="polite"></span><button id="page-next" class="ghost" aria-label="下一页">→</button></div></div>
+    </section>
+    <section class="import-card manual-panel">
+      <h2>继续收藏，或者从零开始</h2>
+      <div class="form-row"><input id="new-title" aria-label="新榜单名称" placeholder="我的年度榜单"><select id="new-type" aria-label="新榜单类型"><option value="songs">歌曲榜</option><option value="albums">专辑榜</option></select><button id="new-chart">新建空白榜单</button></div>
+      <p class="hint">新建后当前草稿会被替换；请先下载工程文件保留之前的作品。</p>
+      <form id="search-form" class="form-row"><input id="search-query" placeholder="搜索作品名或音乐人" aria-label="搜索作品"><select id="search-provider" aria-label="搜索来源"><option value="itunes">Apple / iTunes</option><option value="lastfm">Last.fm（需后端配置）</option></select><button>搜索</button></form>
+      <p id="manual-status" class="hint" role="status"></p><div id="search-results" class="search-results"></div>
+      <details><summary>找不到？自己填写</summary><form id="manual-form" class="manual-form"><label>作品名称<input id="manual-name" required maxlength="200"></label><label>音乐人<input id="manual-artist" maxlength="200"></label><label>所属专辑（歌曲可选）<input id="manual-album" maxlength="200"></label><label>封面图片<input id="manual-cover" type="file" accept="image/png,image/jpeg,image/webp"></label><button>加入当前榜单</button></form></details>
+    </section>
+    <section class="import-card">
+      <label for="playlist-url">网易云歌单链接</label>
+      <div class="form-row"><input id="playlist-url" value="https://music.163.com/playlist?id=18081287035" placeholder="粘贴歌单链接或输入歌单 ID" /><button id="import">导入歌单 <span>→</span></button></div>
+      <p class="hint">公开歌单可直接读取；私密、下架或无权限歌曲会单独标记。</p>
+    </section>
+    <section id="status" class="status" hidden></section>
+    <section id="result" hidden><div class="result-head"><div><p class="eyebrow">IMPORT RESULT</p><h2 id="playlist-name"></h2><p id="summary" class="muted"></p></div><button id="list-sort-toggle" class="ghost" type="button" aria-pressed="false">开始排序</button><button id="clear" class="ghost">清除本地记录</button></div><div id="songs" class="songs"></div></section>
+  <footer class="site-footer">本工具用于整理个人音乐榜单，与音乐平台无关联。歌曲资料和封面归各权利人所有，数据来源以作品记录为准。<a href="LEGAL.md">使用与数据说明</a> · <a href="LICENSE">代码许可</a></footer></main>
+  <script src="assets.js"></script>
+  <script src="themes.js"></script>
+  <script src="albums.js"></script>
+  <script src="sorting.js"></script>
+  <script src="design.js"></script>
+  <script src="app.js"></script>
+  <script src="export.js"></script>
+  <script src="text-export.js"></script>
+  <script src="project.js"></script>
+  <script src="manual.js"></script>
+</body>
+</html>
