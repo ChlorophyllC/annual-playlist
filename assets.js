@@ -29,7 +29,11 @@ window.ChartAssets = (() => {
     const configured = localStorage.getItem('annual-playlist:backend') || (location.hostname === 'chlorophyllc.github.io' ? 'https://annual-playlist-netease.cookie4830.workers.dev' : '');
     return configured ? configured.replace(/\/$/, '') + '/' + path.replace(/^\//, '') : new URL(path.replace(/^\//, ''), location.href).href;
   }
-  function localServer() { return ['localhost', '127.0.0.1'].includes(location.hostname) || Boolean(localStorage.getItem('annual-playlist:backend')); }
+  function localServer() {
+    return ['localhost', '127.0.0.1'].includes(location.hostname) ||
+      Boolean(localStorage.getItem('annual-playlist:backend')) ||
+      location.hostname === 'chlorophyllc.github.io';
+  }
   function dataURL(blob) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); }); }
   async function normalize(blob) {
     if (blob.size > 20 * 1024 * 1024) throw new Error('请选择小于 20MB 的图片');
