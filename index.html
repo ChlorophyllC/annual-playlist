@@ -51,6 +51,7 @@
       <p class="hint">新建后当前草稿会被替换；请先下载工程文件保留之前的作品。</p>
       <form id="search-form" class="form-row"><input id="search-query" placeholder="搜索作品名或音乐人" aria-label="搜索作品"><select id="search-provider" aria-label="搜索来源"><option value="itunes">Apple / iTunes</option><option value="lastfm">Last.fm（需后端配置）</option></select><button>搜索</button></form>
       <p id="manual-status" class="hint" role="status"></p><div id="search-results" class="search-results"></div>
+      <details class="batch-import"><summary>粘贴歌单文本（每行一首）</summary><p class="hint">支持「歌名 - 歌手」或「歌名｜歌手」。会逐行搜索 Apple Music，默认使用第一个匹配结果；导入后仍可在列表中替换封面和文字。</p><textarea id="batch-text" rows="7" placeholder="歌名 - 歌手\n另一首歌 - 另一位歌手"></textarea><button id="batch-import-button" type="button">匹配并加入当前榜单</button></details>
       <details><summary>找不到？自己填写</summary><form id="manual-form" class="manual-form"><label>作品名称<input id="manual-name" required maxlength="200"></label><label>音乐人<input id="manual-artist" maxlength="200"></label><label>所属专辑（歌曲可选）<input id="manual-album" maxlength="200"></label><label>封面图片<input id="manual-cover" type="file" accept="image/png,image/jpeg,image/webp"></label><button>加入当前榜单</button></form></details>
     </section>
     <section class="import-card">

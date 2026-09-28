@@ -57,4 +57,23 @@
       event.target.reset();status.textContent='已加入当前榜单并保存。';
     }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
   });
+  $('batch-import-button').addEventListener('click', async () => {
+    const lines = $('batch-text').value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    if (!lines.length) { status.textContent = '请先粘贴歌单文本。'; return; }
+    const button = $('batch-import-button'); button.disabled = true; const type = $('chart-type').value; let added = 0; const missing = [];
+    for (const [index, line] of lines.entries()) {
+      status.textContent = `正在匹配第 ${index + 1} / ${lines.length} 行…`;
+      const parts = line.split(/\s+[-—|｜]\s+/);
+      const query = parts.join(' ');
+      try {
+        const response = await jsonp('https://itunes.apple.com/search?' + new URLSearchParams({term: query, entity: type === 'albums' ? 'album' : 'song', limit: '1', country: 'US'}));
+        const item = response.results?.[0];
+        if (!item) { missing.push(line); continue; }
+        const album = type === 'albums' ? item : {collectionId: item.collectionId, collectionName: item.collectionName, artworkUrl100: item.artworkUrl100};
+        await add({id: `apple:${type}:${type === 'albums' ? item.collectionId : item.trackId}`, kind: type === 'albums' ? 'album' : 'song', matched: true, name: type === 'albums' ? item.collectionName : item.trackName, artists: item.artistName ? [{name: item.artistName}] : [], album: {id: album.collectionId ? `apple:${album.collectionId}` : null, name: album.collectionName || (type === 'albums' ? item.collectionName : ''), cover: '', artists: type === 'albums' && item.artistName ? [{name: item.artistName}] : []}, source: 'Apple / iTunes', url: item.collectionViewUrl || item.trackViewUrl}, (album.artworkUrl100 || '').replace('100x100', '600x600'));
+        added++;
+      } catch (_) { missing.push(line); }
+    }
+    status.textContent = `已加入 ${added} 行。${missing.length ? `未匹配 ${missing.length} 行，可单独搜索或手动填写。` : ''}`; button.disabled = false;
+  });
 })();
