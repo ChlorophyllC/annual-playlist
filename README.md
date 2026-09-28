@@ -39,7 +39,7 @@ python3 server.py
 | 编辑、排序、颜色、工程文件、导出 | 支持 | 支持 |
 | Apple / iTunes 手动搜索和文本逐行匹配 | 支持 | 支持 |
 | 自填条目、上传图片 | 支持 | 支持 |
-| 网易云链接导入 | 支持；也可部署 Worker | Worker 版本可接入；无需 Python |
+| 网易云链接导入 | 支持；也可部署 Worker | 已连接 annual-playlist-netease.cookie4830.workers.dev |
 | Last.fm 搜索 | 设置 `LASTFM_API_KEY` 后支持 | 需独立后端；否则手动填写 |
 | 下载远程封面 | 限定来源的后端 + 直接请求回退 | 依赖来源 CORS；失败时可上传 |
 
@@ -77,7 +77,7 @@ Chromium 与 WebKit 回归覆盖：两主题、三比例、PNG/JPG、四页 ZIP�
 
 ## JavaScript Worker（网易云）
 
-`workers/netease-importer.js` 是不依赖 Python 的 Cloudflare Worker：同样读取完整 `trackIds`，分批查询歌曲详情，返回与本地接口相同的数据结构。部署后在浏览器控制台设置 `localStorage.setItem('annual-playlist:backend', 'https://你的-worker.workers.dev')`，静态页面的网易云导入按钮就会连接 Worker。部署前要配置 Worker 的 CORS、频率限制、请求数量上限，并确认网易云接口和平台条款允许你的使用场景。Worker 不保存用户歌单或 API key。
+`workers/netease-importer.js` 是不依赖 Python 的 Cloudflare Worker：同样读取完整 `trackIds`，分批查询歌曲详情，返回与本地接口相同的数据结构。当前线上页面默认连接 `https://annual-playlist-netease.cookie4830.workers.dev`；其他部署可在浏览器控制台设置 `localStorage.setItem('annual-playlist:backend', 'https://你的-worker.workers.dev')`。部署前要配置 Worker 的 CORS、频率限制、请求数量上限，并确认网易云接口和平台条款允许你的使用场景。Worker 不保存用户歌单或 API key。
 
 ## 后续
 

@@ -26,7 +26,7 @@ window.ChartAssets = (() => {
   }
   async function clear() { return store(null); }
   function api(path) {
-    const configured = localStorage.getItem('annual-playlist:backend') || '';
+    const configured = localStorage.getItem('annual-playlist:backend') || (location.hostname === 'chlorophyllc.github.io' ? 'https://annual-playlist-netease.cookie4830.workers.dev' : '');
     return configured ? configured.replace(/\/$/, '') + '/' + path.replace(/^\//, '') : new URL(path.replace(/^\//, ''), location.href).href;
   }
   function localServer() { return ['localhost', '127.0.0.1'].includes(location.hostname) || Boolean(localStorage.getItem('annual-playlist:backend')); }

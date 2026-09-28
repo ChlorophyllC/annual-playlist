@@ -14,7 +14,7 @@
 
 ## 功能边界
 
-Pages 不运行 Python。公开页面支持 Apple / iTunes 手动搜索、自行填写、上传图片、工程文件、主题编辑和所有本地导出。网易云链接导入和 Last.fm API 搜索仅在本地后端可用时启用。其他图片站点的跨域限制可能阻止下载，此时可手动上传。
+Pages 不运行 Python。公开页面支持 Apple / iTunes 手动搜索、自行填写、上传图片、工程文件、主题编辑和所有本地导出。网易云链接导入已连接你部署的 Cloudflare Worker；Last.fm API 搜索仍仅在本地后端或另行部署服务可用时启用。其他图片站点的跨域限制可能阻止下载，此时可手动上传。
 
 本地运行 `python3 server.py`。如需 Last.fm 搜索，在自己的终端环境设置 `LASTFM_API_KEY`；不要提交它。未配置时，搜索界面会解释原因。
 
@@ -22,4 +22,4 @@ Pages 不运行 Python。公开页面支持 Apple / iTunes 手动搜索、自行
 
 ## 当前状态
 
-构建与浏览器测试已就绪，是否已上线以 GitHub Actions 实际运行结果为准。授权前不创建或修改远程仓库。
+构建与浏览器测试已就绪，公开页面已连接 `https://annual-playlist-netease.cookie4830.workers.dev`。
