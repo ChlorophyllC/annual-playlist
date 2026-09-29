@@ -30,6 +30,24 @@ document.querySelector('#welcome-enter').addEventListener('click', closeWelcome)
 document.querySelector('#welcome-clear').addEventListener('click', async () => { await ChartAssets.clear(); localStorage.removeItem(savedKey); location.reload(); });
 document.querySelector('#mobile-save').addEventListener('click', () => document.querySelector('#project-export').click());
 document.querySelector('#mobile-export').addEventListener('click', () => document.querySelector('#export-button').click());
+const undoBar = document.querySelector('#undo-bar');
+let undoSnapshot = null;
+window.addEventListener('chart-deleted', event => {
+  undoSnapshot = event.detail;
+  document.querySelector('#undo-message').textContent = `已删除「${event.detail.name}」`;
+  undoBar.hidden = false;
+  clearTimeout(window.undoTimer);
+  window.undoTimer = setTimeout(() => { undoSnapshot = null; undoBar.hidden = true; }, 8000);
+});
+document.querySelector('#undo-delete').addEventListener('click', async () => {
+  if (!undoSnapshot) return;
+  const snapshot = undoSnapshot; undoSnapshot = null; undoBar.hidden = true;
+  await window.loadProjectState(snapshot.before);
+  showStatus('已撤销删除，条目和相关设置已恢复。');
+});
+window.addEventListener('beforeunload', event => {
+  if (document.querySelector('#workspace-save')?.textContent === '正在保存…') { event.preventDefault(); event.returnValue = ''; }
+});
 function showStatus(message, error = false) { status.hidden = false; status.textContent = message; status.className = `status${error ? ' error' : ''}`; }
 function setSaveState(text, error = false) { const node = document.querySelector('#workspace-save'); node.textContent = text; node.style.color = error ? '#983b27' : ''; }
 function updateWorkspaceStatus(data) { const name = document.querySelector('#workspace-name'), meta = document.querySelector('#workspace-meta'); if (!data?.playlist) { name.textContent = '准备开始'; meta.textContent = '选择导入歌单或从零开始'; return; } const count = data.items?.length || 0; const type = data.preferredType === 'albums' ? '专辑榜' : '歌曲榜'; name.textContent = data.playlist.name || '未命名歌单'; meta.textContent = `${type} · ${count} 项 · 可继续编辑`; }

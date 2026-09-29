@@ -26,7 +26,9 @@
   $('search-form').addEventListener('submit',async event=>{
     event.preventDefault();const query=$('search-query').value.trim();if(!query)return;
     const type=$('chart-type').value, provider=$('search-provider').value;
-    const searchButton=event.target.querySelector('button');searchButton.disabled=true;status.textContent='正在搜索…';$('search-results').replaceChildren();
+    const searchButton=event.target.querySelector('button');searchButton.disabled=true;status.textContent='正在搜索…';
+    const resultsNode=$('search-results'); resultsNode.replaceChildren();
+    for(let index=0;index<6;index++){const skeleton=document.createElement('div');skeleton.className='search-item search-skeleton';skeleton.setAttribute('aria-hidden','true');skeleton.innerHTML='<span></span><span></span><span></span>';resultsNode.append(skeleton);}
     try{
       let entries;
       if(provider==='netease'){
@@ -37,7 +39,8 @@
         const response=await jsonp('https://itunes.apple.com/search?'+new URLSearchParams({term:query,entity:type==='albums'?'album':'song',limit:'18',country:'US'}));
         entries=response.results.map(item=>({id:'apple:'+(type==='albums'?item.collectionId:item.trackId),name:type==='albums'?item.collectionName:item.trackName,artist:item.artistName,album:item.collectionName,albumId:'apple:'+item.collectionId,cover:(item.artworkUrl100||'').replace('100x100','600x600'),url:item.collectionViewUrl||item.trackViewUrl,source:'Apple / iTunes'}));
       }
-      status.textContent=entries.length?'选择正确版本，点击加入榜单。':'没有找到，可以换个关键词或自行填写。';
+      status.textContent=entries.length?`找到 ${entries.length} 个结果，选择正确版本加入榜单。`:'没有找到结果，可以换个关键词或自行填写。';
+      resultsNode.replaceChildren();
       entries.forEach(item=>{
         const card=document.createElement('article');card.className='search-item';const image=new Image();image.alt=item.name;image.referrerPolicy='no-referrer';if(item.cover)image.src=item.cover;
         const title=document.createElement('strong');title.textContent=item.name;const artist=document.createElement('span');artist.textContent=item.artist;
@@ -45,7 +48,7 @@
         button.addEventListener('click',async()=>{button.disabled=true;try{const uid=item.id||'manual:'+crypto.randomUUID();await add({id:uid,kind:type==='albums'?'album':'song',matched:true,name:item.name,artists:[{name:item.artist}],album:{id:item.albumId||uid,name:item.album||item.name,cover:'',artists:type==='albums'?[{name:item.artist}]:[]},source:item.source,url:item.url},item.cover);button.textContent='已加入';}catch(error){status.textContent=error.message;button.disabled=false;}});
         card.append(image,title,artist,album,button);$('search-results').append(card);
       });
-    }catch(error){status.textContent=error.message;}finally{searchButton.disabled=false;}
+    }catch(error){resultsNode.replaceChildren();status.textContent=error.message;}finally{searchButton.disabled=false;}
   });
   document.querySelectorAll('.provider-switch [data-provider]').forEach(button=>button.addEventListener('click',()=>{
     $('search-provider').value=button.dataset.provider;

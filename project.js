@@ -47,7 +47,7 @@
     return {bytes,extension:mimeExt[match[1].toLowerCase()],mime:match[1].toLowerCase()};
   }
   function validate(payload) {
-    if(payload.format!=='annual-playlist-project'||![1,2].includes(payload.version)||!payload.playlist?.playlist||!Array.isArray(payload.playlist.items)||payload.playlist.items.length>5000) throw new Error('不是支持的工程文件');
+    if(payload.format!=='annual-playlist-project'||payload.version!==2||!payload.playlist?.playlist||!Array.isArray(payload.playlist.items)||payload.playlist.items.length>5000) throw new Error('不是当前版本的工程文件');
     const clean=structuredClone(payload);
     for(const [index,item] of clean.playlist.items.entries()) { if(!item||typeof item!=='object'||!['string','number'].includes(typeof item.id))throw new Error('作品记录不完整');item.position??=index;if(item.album?.cover&&!/^(https?:\/\/|data:image\/(png|jpeg|webp);base64,|assets\/)/i.test(item.album.cover))throw new Error('不支持的封面格式'); }
     const d=clean.design||{};if(!['gallery','editorial'].includes(d.theme)||!['songs','albums'].includes(d.chartType)||!['portrait','square','wide'].includes(d.ratio))throw new Error('工程主题或比例无效');
@@ -90,10 +90,7 @@
         for(const item of payload.playlist?.items||[])if(item.album)item.album.cover=restoreImage(item.album.cover);
         for(const cover of Object.values(payload.playlist?.coverOverrides||{}))cover.data=restoreImage(cover.data);
         await window.loadProjectState(validate(payload));status.textContent=`工程已恢复，${payload.assetCount||0} 张自定义图片已载入；在线封面按原链接加载。`;
-      } else {
-        if(file.size>100*1024*1024)throw new Error('工程文件不能超过 100MB');
-        const payload=validate(JSON.parse(await file.text()));await window.loadProjectState(payload);status.textContent='旧版 JSON 工程已恢复。';
-      }
+      } else throw new Error('请导入当前版本的工程 ZIP 文件');
     }catch(error){status.textContent=`导入失败：${error.message}`;}finally{input.value='';}
   });
 })();

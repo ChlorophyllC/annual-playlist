@@ -368,6 +368,7 @@
   };
   window.deleteChartItem = async (item, albumMode = false) => {
     if (!data?.items) return;
+    const before = {playlist: structuredClone(data), design: structuredClone(state)};
     const removedKeys = new Set();
     if (albumMode) {
       const albumId = String(item.album?.id ?? item.id);
@@ -395,6 +396,7 @@
       state.orders[id] = (state.orders[id] || []).filter(key => !removedKeys.has(key));
     }
     await window.updateImportedData(data);
+    window.dispatchEvent(new CustomEvent('chart-deleted', {detail: {name: item.name || item.id, before}}));
   };
   if (window.EyeDropper) {
     $('pick-color').hidden = false;
