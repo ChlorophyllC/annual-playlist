@@ -4,6 +4,18 @@ const status = document.querySelector('#status');
 const result = document.querySelector('#result');
 const savedKey = 'annual-playlist:last-import';
 const welcome = document.querySelector('#welcome');
+// Keep the settings rail compact: opening one panel closes its siblings.
+document.querySelectorAll('.control-card').forEach(card => {
+  card.addEventListener('toggle', () => {
+    if (!card.open) return;
+    document.querySelectorAll('.control-card[open]').forEach(other => {
+      if (other !== card) other.open = false;
+    });
+    if (matchMedia('(max-width: 850px)').matches) {
+      requestAnimationFrame(() => card.scrollIntoView({behavior: 'smooth', block: 'nearest'}));
+    }
+  });
+});
 function closeWelcome() { welcome.hidden = true; }
 function showWelcome(hasDraft) {
   welcome.hidden = false;

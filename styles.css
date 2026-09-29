@@ -36,6 +36,8 @@
 .design-controls{background:none;border:0;padding:0;display:grid;gap:10px}
 .control-card{background:#fff;border:1px solid #e5e0d7;border-radius:12px;overflow:hidden}
 .control-card>summary{padding:16px;cursor:pointer;font-weight:700;font-size:14px}
+.control-card>summary::marker{color:#b34f36}
+.control-card[open]>summary{border-bottom:1px solid #eee9e1;background:#fcfbf8}
 .control-card>summary:focus-visible{outline:2px solid #b34f36;outline-offset:-3px}
 .control-body{padding:0 16px 16px}.control-body>label{display:block;font-size:12px;font-weight:700;margin:16px 0 8px}
 .control-body>input{width:100%;font:inherit;font-size:14px}.control-body .eyebrow,.control-body h2{display:none}
