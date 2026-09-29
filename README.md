@@ -16,7 +16,7 @@ python3 server.py
 
 - **歌曲榜／专辑榜**：歌曲提取专辑时按专辑 ID 合并，保留首次出现顺序；同名不同版本不混合。音乐人优先用专辑署名，否则提示使用已导入歌曲的署名。
 - **已有歌单**：网易云链接 → 完整 trackIds → 分批取得歌曲详情。无法匹配的歌曲保留；缺少专辑信息的歌曲在专辑榜下方列出。还支持粘贴纯文本歌单，每行逐一查询 Apple Music，默认取第一个结果并提示未匹配行。
-- **从零开始或继续添加**：新建空白榜单；Apple / iTunes 搜索后人工选择；可选 Last.fm 搜索；自行填写作品名和图片。搜索来源和作品链接保存在数据中。Apple 搜索歌曲结果会带回所属专辑；切换到专辑榜时直接搜索专辑，所以两种榜单都能匹配封面和专辑信息。
+- **从零开始或继续添加**：新建空白榜单；Apple / iTunes、网易云搜索后人工选择；自行填写作品名和图片。搜索来源和作品链接保存在数据中。Apple 搜索歌曲结果会带回所属专辑；切换到专辑榜时直接搜索专辑，所以两种榜单都能匹配封面和专辑信息。
 - **排序**：先开启排序模式，再在预览或完整列表拖动；支持勾选多项一起移动、触屏把手、边缘滚动。普通模式可选择／复制文字。歌曲榜和专辑榜独立保存次序。
 - **两种主题**：米白封面画廊、撞色年度杂志。杂志可选四组配色，或用颜色选择器自行设置；浏览器支持 EyeDropper 时可从屏幕取强调色。
 - **直接改字**：点击预览文字编辑，Enter 完成，Esc 撤回本次修改。修改名次文字不改变顺序，可恢复当前类型的默认文字。
@@ -28,7 +28,7 @@ python3 server.py
 
 草稿和图片保存在浏览器 IndexedDB，排版偏好使用 localStorage，兼容迁移早期 localStorage 草稿。存储失败会提示下载备份。
 
-工程文件采用 `.annual.zip`：`project.json` 保存榜单、文字、评分、排序和主题设置，用户上传或手动替换的图片单独放在 `assets/`，不嵌入 JSON。Apple、网易云、Last.fm 等远程封面只保存图片链接，重新打开时由浏览器按链接加载，不会为了导出而批量下载或缓存远程封面。旧版 `.annual.json` 仍可导入。
+工程文件采用 `.annual.zip`：`project.json` 保存榜单、文字、评分、排序和主题设置，用户上传或手动替换的图片单独放在 `assets/`，不嵌入 JSON。Apple、网易云等远程封面只保存图片链接，重新打开时由浏览器按链接加载，不会为了导出而批量下载或缓存远程封面。旧版 `.annual.json` 仍可导入。
 
 本地自动保存仍将当前项目和用户上传图片保存在浏览器 IndexedDB，以便刷新后恢复；应用封面 URL 时仅记录链接。上传图片最长边缩小到 1600px、PNG 编码；单张输入最大 20MB，导入 ZIP 最大 100MB。工程文件可能含私人文字和用户图片，请自行决定是否分享。
 ## 本地与 Pages 的区别
@@ -38,8 +38,7 @@ python3 server.py
 | 编辑、排序、颜色、工程文件、导出 | 支持 | 支持 |
 | Apple / iTunes 手动搜索和文本逐行匹配 | 支持 | 支持 |
 | 自填条目、上传图片 | 支持 | 支持 |
-| 网易云链接导入 | 支持；也可部署 Worker | 已连接 annual-playlist-netease.cookie4830.workers.dev |
-| Last.fm 搜索 | 设置 `LASTFM_API_KEY` 后支持 | 需独立后端；否则手动填写 |
+| 网易云歌单导入与手动搜索 | 本地服务或 Worker | 本地自动使用 `server.py`，Pages 使用已配置 Worker |
 | 下载远程封面 | 限定来源的后端 + 直接请求回退 | 依赖来源 CORS；失败时可上传 |
 
 API key 只能放服务端环境变量，不提交到 GitHub。静态版不是通过代理公共未知服务绕过平台限制。后续如果部署独立后端，需要补齐 CORS、HTTPS、限速和运维配置；仅设置地址不代表完整部署。
@@ -52,7 +51,7 @@ API key 只能放服务端环境变量，不提交到 GitHub。静态版不是�
 - `assets.js`、`project.js`：IndexedDB、图片归档与工程格式。
 - `manual.js`：搜索和手动添加。
 - `export.js`：基于浏览器测量结果直接 Canvas 绘制，无 SVG foreignObject；适配 Chromium 和 WebKit。下载不包含编辑控件。
-- `server.py`：本地网易云／Last.fm 接口和限定图片来源代理。
+- `server.py`：本地网易云接口和限定图片来源代理。
 - `scripts/build_pages.py`：构建纯静态 `dist/`；`.github/workflows/pages.yml` 发布。
 
 目前没有运行时第三方 JS 包。代码采用 [MIT](LICENSE)，封面与音乐元数据不包含在该授权中。来源、隐私、平台使用边界见 [LEGAL.md](LEGAL.md)。
@@ -72,11 +71,11 @@ python3 -m venv .venv
 
 已实测 SOTY 2026：39 个 ID 全部匹配；默认歌单详情只有 10 首。实际 Apple 搜索返回候选并成功加入／缓存专辑。
 
-Chromium 与 WebKit 回归覆盖：两主题、三比例、PNG/JPG、四页 ZIP、图片位置和像素检查、歌曲／专辑、纯文字海报、手动新建、用户上传、配色、IndexedDB 恢复、工程文件离线重开、缺封面仍保存、TXT。未单独验证 Safari 发布版和 Firefox。Last.fm 在线搜索需用户自己的 key，未对真实 key 运行测试。
+Chromium 与 WebKit 回归覆盖：两主题、三比例、PNG/JPG、四页 ZIP、图片位置和像素检查、歌曲／专辑、纯文字海报、手动新建、用户上传、配色、IndexedDB 恢复、工程文件离线重开、缺封面仍保存、TXT。未单独验证 Safari 发布版和 Firefox。
 
 ## JavaScript Worker（网易云）
 
-`workers/netease-importer.js` 是不依赖 Python 的 Cloudflare Worker：同样读取完整 `trackIds`，分批查询歌曲详情，返回与本地接口相同的数据结构。当前线上页面默认连接 `https://annual-playlist-netease.cookie4830.workers.dev`；其他部署可在浏览器控制台设置 `localStorage.setItem('annual-playlist:backend', 'https://你的-worker.workers.dev')`。部署前要配置 Worker 的 CORS、频率限制、请求数量上限，并确认网易云接口和平台条款允许你的使用场景。Worker 不保存用户歌单或 API key。
+`workers/netease-importer.js` 是不依赖 Python 的 Cloudflare Worker：读取歌单完整 `trackIds` 并分批查询详情，也代理歌曲／专辑候选搜索。当前线上页面默认连接 `https://annual-playlist-netease.cookie4830.workers.dev`；其他部署可在浏览器控制台设置 `localStorage.setItem('annual-playlist:backend', 'https://你的-worker.workers.dev')`。部署前要配置 Worker 的 CORS、频率限制、请求数量上限，并确认网易云网页接口和平台条款允许你的使用场景。网易云搜索使用的是网页相关接口，不是承诺稳定的开放 API，结果字段或可用性可能变化。Worker 不保存用户歌单或 API key。
 
 ## 后续
 

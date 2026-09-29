@@ -28,9 +28,10 @@
     const searchButton=event.target.querySelector('button');searchButton.disabled=true;status.textContent='正在搜索…';$('search-results').replaceChildren();
     try{
       let entries;
-      if(provider==='lastfm'){
-        if(!ChartAssets.localServer())throw new Error('Last.fm 搜索需要配置后端和 API key。可使用 Apple 搜索，或自行填写并粘贴 Last.fm 图片链接。');
-        const r=await fetch(ChartAssets.api('api/search')+'?'+new URLSearchParams({q:query,type,provider}));const body=await r.json();if(!r.ok)throw new Error(body.error||'搜索失败');entries=body.results;
+      if(provider==='netease'){
+        const r=await fetch(ChartAssets.api('api/search'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,type})});
+        let body;try{body=await r.json();}catch(_){throw new Error('网易云搜索服务返回了无效响应，请确认本地 Python 服务已重启，或线上 Worker 已重新部署。');}
+        if(!r.ok)throw new Error(body.error||'网易云搜索失败');entries=Array.isArray(body.results)?body.results:[];
       }else{
         const response=await jsonp('https://itunes.apple.com/search?'+new URLSearchParams({term:query,entity:type==='albums'?'album':'song',limit:'18',country:'US'}));
         entries=response.results.map(item=>({id:'apple:'+(type==='albums'?item.collectionId:item.trackId),name:type==='albums'?item.collectionName:item.trackName,artist:item.artistName,album:item.collectionName,albumId:'apple:'+item.collectionId,cover:(item.artworkUrl100||'').replace('100x100','600x600'),url:item.collectionViewUrl||item.trackViewUrl,source:'Apple / iTunes'}));

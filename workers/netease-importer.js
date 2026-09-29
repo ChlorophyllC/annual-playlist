@@ -1,5 +1,14 @@
 // Only public playlist metadata is fetched. No cookies or credentials are accepted.
-const allowedOrigins = new Set(['https://chlorophyllc.github.io', 'http://localhost:8000', 'http://127.0.0.1:8000']);
+const allowedOrigins = new Set(['https://chlorophyllc.github.io', 'https://www.chlorophyllc.github.io', 'https://annual-playlist.pages.dev', 'http://localhost:8000', 'http://127.0.0.1:8000']);
+function originAllowed(origin, env) {
+  if (!origin) return true;
+  if (allowedOrigins.has(origin) || origin === env?.SITE_ORIGIN) return true;
+  try {
+    const url = new URL(origin);
+    return (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) ||
+      (url.protocol === 'https:' && url.hostname.endsWith('.pages.dev') && url.hostname.startsWith('annual-playlist'));
+  } catch (_) { return false; }
+}
 const allowedHosts = new Set(['163cn.tv', 'music.163.com', 'y.music.163.com']);
 function idFrom(value) { const match = String(value || '').match(/(?:[?&]id=|playlist[/:])([0-9]{1,20})(?![0-9])/); return match?.[1] || (/^\d{1,20}$/.test(value) ? value : ''); }
 async function resolveId(value) {
@@ -48,13 +57,37 @@ async function importPlaylist(value) {
   const items = ids.map((id, position) => { const song = byId.get(String(id)); if (!song) return {id, position, matched: false}; const album = song.al || {}; return {id: song.id, position, matched: true, name: song.name || '', artists: (song.ar || []).map(artist => ({id: artist.id, name: artist.name})), album: {id: album.id, name: album.name || '', cover: album.picUrl || ''}, duration: song.dt || 0, url: `https://music.163.com/#/song?id=${song.id}`}; });
   return {playlist: {id, name: playlist.name || '未命名歌单', count: playlist.trackCount || ids.length}, items, sourceCount, truncated: sourceCount > 100};
 }
+async function searchMusic(query, type) {
+  if (typeof query !== 'string' || !query.trim() || query.length > 120) throw new Error('请输入 1 至 120 个字符的搜索词');
+  if (!['songs', 'albums'].includes(type)) throw new Error('不支持的搜索类型');
+  const kind = type === 'albums' ? 'albums' : 'songs';
+  const params = `s=${encodeURIComponent(query.trim())}&type=${type === 'albums' ? '10' : '1'}&limit=18&offset=0`;
+  const data = await api(`https://music.163.com/api/search/get?${params}`);
+  if (data.code !== 200) throw new Error('网易云搜索暂时不可用');
+  const list = data.result?.[kind] || [];
+  let details = new Map();
+  if (type === 'songs' && list.length) {
+    const ids = list.map(item => item.id).filter(Boolean);
+    const response = await api('https://music.163.com/api/v3/song/detail', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `c=${encodeURIComponent(JSON.stringify(ids.map(id => ({id}))))}`});
+    details = new Map((response.songs || []).map(item => [String(item.id), item]));
+  }
+  return {results: list.map(item => {
+    const detail = details.get(String(item.id)) || item;
+    const artists = detail.ar || item.artists || (item.artist ? [item.artist] : []);
+    const artist = artists.map(entry => entry.name).filter(Boolean).join(' / ');
+    const album = type === 'albums' ? item : (detail.al || item.album || {});
+    const cover = album.picUrl || album.blurPicUrl || '';
+    return {id: `netease:${type}:${item.id}`, name: detail.name || item.name || '', artist, album: album.name || '', albumId: album.id ? `netease:album:${album.id}` : null, cover: cover.replace(/^http:/, 'https:'), source: '网易云音乐', url: `https://music.163.com/#/${type === 'albums' ? 'album' : 'song'}?id=${item.id}`};
+  })};
+}
 export default {async fetch(request, env = {}) {
   const origin = request.headers.get('Origin');
   const headers = {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Vary': 'Origin', 'Access-Control-Allow-Methods': 'POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type'};
-  if (allowedOrigins.has(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  if (origin && originAllowed(origin, env)) headers['Access-Control-Allow-Origin'] = origin;
   const json = (value, status = 200) => new Response(JSON.stringify(value), {status, headers});
-  if (origin && !allowedOrigins.has(origin)) return json({error: '不允许的来源'}, 403);
-  if (new URL(request.url).pathname !== '/api/import') return json({error: 'Not found'}, 404);
+  if (!originAllowed(origin, env)) return json({error: '不允许的来源'}, 403);
+  const pathname = new URL(request.url).pathname;
+  if (!['/api/import', '/api/search'].includes(pathname)) return json({error: 'Not found'}, 404);
   if (request.method === 'OPTIONS') return new Response(null, {status: 204, headers});
   if (request.method !== 'POST') return json({error: '仅支持 POST'}, 405);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -68,6 +101,10 @@ export default {async fetch(request, env = {}) {
     const chunks = []; let size = 0;
     while (true) { const {done, value} = await reader.read(); if (done) break; size += value.byteLength; if (size > 4096) { await reader.cancel(); return json({error: '请求过大'}, 413); } chunks.push(value); }
     const body = JSON.parse(await new Blob(chunks).text());
+    if (pathname === '/api/search') return json(await searchMusic(body.query, body.type));
     return json(await importPlaylist(body.url));
-  } catch (error) { return json({error: error.name === 'TimeoutError' ? '请求超时，请稍后重试' : error.message || '导入失败'}, 400); }
+  } catch (error) {
+    const message = error?.name === 'TimeoutError' ? '请求超时，请稍后重试' : (error?.message || '请求失败');
+    return json({error: message === 'The string did not match the expected pattern.' ? '网易云搜索服务暂时不可用，请稍后重试（请确认 Worker 已重新部署）' : message}, 400);
+  }
 }};

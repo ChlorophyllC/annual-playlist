@@ -12,7 +12,7 @@ PORT = 8000
 def fetch_cover(url):
     parsed = urllib.parse.urlsplit(url)
     # Only the known cover CDN is allowed; never follow redirects to other hosts.
-    allowed_hosts = re.fullmatch(r"p[0-9]+\.music\.126\.net", parsed.hostname or "") or re.fullmatch(r"(?:lastfm\.freetls\.fastly\.net|userserve-ak\.last\.fm)", parsed.hostname or "")
+    allowed_hosts = re.fullmatch(r"p[0-9]+\.music\.126\.net", parsed.hostname or "")
     allowed_hosts = allowed_hosts or re.fullmatch(r"[a-zA-Z0-9-]+\.mzstatic\.com", parsed.hostname or "")
     if (parsed.scheme not in ("http", "https") or parsed.username or parsed.password
             or parsed.port not in (None, 80, 443)
@@ -113,35 +113,42 @@ def fetch_playlist(value):
         })
     return {"playlist": {"id": pid, "name": playlist.get("name", "未命名歌单"), "count": playlist.get("trackCount", len(ids))}, "items": items, "sourceCount": source_count, "truncated": source_count > 100}
 
+def search_netease(query, chart_type):
+    if not isinstance(query, str) or not query.strip() or len(query) > 120:
+        raise ValueError("请输入 1 至 120 个字符的搜索词")
+    if chart_type not in ("songs", "albums"):
+        raise ValueError("不支持的搜索类型")
+    album_mode = chart_type == "albums"
+    params = urllib.parse.urlencode({"s": query.strip(), "type": 10 if album_mode else 1, "limit": 18, "offset": 0})
+    data = get_json("https://music.163.com/api/search/get?" + params)
+    if data.get("code") != 200:
+        raise ValueError("网易云搜索暂时不可用")
+    found = data.get("result", {}).get("albums" if album_mode else "songs", [])
+    details = {}
+    if not album_mode and found:
+        payload = json.dumps([{"id": item.get("id")} for item in found if item.get("id")], separators=(",", ":")).encode()
+        detail_data = get_json("https://music.163.com/api/v3/song/detail", b"c=" + urllib.parse.quote_from_bytes(payload).encode())
+        details = {str(item.get("id")): item for item in detail_data.get("songs", [])}
+    results = []
+    for item in found:
+        detail = details.get(str(item.get("id")), item)
+        artists = detail.get("ar") or item.get("artists") or ([item["artist"]] if item.get("artist") else [])
+        album = item if album_mode else (detail.get("al") or item.get("album", {}))
+        cover = album.get("picUrl") or album.get("blurPicUrl") or ""
+        item_id = item.get("id")
+        results.append({
+            "id": f"netease:{chart_type}:{item_id}", "name": detail.get("name") or item.get("name", ""),
+            "artist": " / ".join(artist.get("name", "") for artist in artists if artist.get("name")),
+            "album": album.get("name", ""),
+            "albumId": f"netease:album:{album['id']}" if album.get("id") else None,
+            "cover": cover.replace("http:", "https:", 1), "source": "网易云音乐",
+            "url": f"https://music.163.com/#/{'album' if album_mode else 'song'}?id={item_id}"
+        })
+    return {"results": results}
+
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlsplit(self.path)
-        if parsed.path == "/api/search":
-            try:
-                params = urllib.parse.parse_qs(parsed.query)
-                api_key = os.environ.get("LASTFM_API_KEY")
-                if not api_key:
-                    raise ValueError("Last.fm 搜索尚未配置 API key，可使用 Apple 搜索或自行填写")
-                album_mode = params.get("type", ["albums"])[0] == "albums"
-                kind = "album" if album_mode else "track"
-                query = params.get("q", [""])[0][:200]
-                response = get_json("https://ws.audioscrobbler.com/2.0/?" + urllib.parse.urlencode({"method":kind+".search",kind:query,"api_key":api_key,"format":"json","limit":18}))
-                if response.get("error"):
-                    raise ValueError("Last.fm 搜索暂不可用")
-                matches = response.get("results", {}).get(kind+"matches", {}).get(kind, [])
-                results = []
-                for item in matches:
-                    images = [image.get("#text") for image in item.get("image", []) if image.get("#text")]
-                    results.append({"id":"lastfm:"+item.get("url", item.get("name", "")),"name":item.get("name", ""),"artist":item.get("artist", ""),"album":item.get("name", "") if album_mode else "","albumId":"lastfm:"+item.get("url", "") if album_mode else None,"cover":images[-1] if images else "","source":"Last.fm","url":item.get("url", "")})
-                content = json.dumps({"results":results}, ensure_ascii=False).encode()
-                self.send_response(200)
-            except Exception as error:
-                content = json.dumps({"error":str(error)}, ensure_ascii=False).encode()
-                self.send_response(400)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(content)
-            return
         if parsed.path != "/api/cover":
             return super().do_GET()
         try:
@@ -157,7 +164,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(400, "Cover unavailable")
 
     def do_POST(self):
-        if self.path != "/api/import":
+        path = urllib.parse.urlsplit(self.path).path
+        if path not in ("/api/import", "/api/search"):
             self.send_error(404)
             return
         try:
@@ -165,7 +173,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not 0 < length <= 4096:
                 raise ValueError("请求大小须在 1–4096 字节之间")
             body = json.loads(self.rfile.read(length) or b"{}")
-            result = fetch_playlist(body.get("url", ""))
+            result = search_netease(body.get("query", ""), body.get("type")) if path == "/api/search" else fetch_playlist(body.get("url", ""))
             raw = json.dumps(result, ensure_ascii=False).encode()
             self.send_response(200)
         except Exception as error:
