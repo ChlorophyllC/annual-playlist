@@ -49,7 +49,7 @@
         <p id="text-export-status" class="hint" role="status"></p>
         </div></details>
       </aside>
-      <div class="preview-area"><div class="preview-toolbar"><span id="preview-source">正在准备样稿…</span><span>静态预览</span></div><div class="sort-toolbar"><button id="sort-toggle" type="button" aria-pressed="false">开始排序</button><span id="sort-info" aria-live="polite"></span></div><div id="poster-mount"></div><div class="page-controls"><button id="page-prev" class="ghost" aria-label="上一页">←</button><span id="page-info" aria-live="polite"></span><button id="page-next" class="ghost" aria-label="下一页">→</button></div></div>
+      <div class="preview-area"><div class="preview-toolbar"><span id="preview-source">正在准备样稿…</span><span>静态预览</span></div><div class="sort-toolbar"><button id="sort-toggle" type="button" aria-pressed="false">开始排序</button><label>排序方式<select id="sort-method"><option value="manual">手动顺序</option><option value="rating-desc">评分从高到低</option><option value="rating-asc">评分从低到高</option><option value="artist">歌手首字母</option><option value="title">歌曲首字母</option></select></label><button id="apply-sort" type="button">应用排序</button><span id="sort-info" aria-live="polite"></span></div><div id="poster-mount"></div><div class="page-controls"><button id="page-prev" class="ghost" aria-label="上一页">←</button><span id="page-info" aria-live="polite"></span><button id="page-next" class="ghost" aria-label="下一页">→</button></div></div>
     </section>
     <section class="import-card manual-panel">
       <h2>继续收藏，或者从零开始</h2>
@@ -67,6 +67,7 @@
     </section>
     <section id="status" class="status" hidden></section>
     <section id="result" hidden><div class="result-head"><div><p class="eyebrow">IMPORT RESULT</p><h2 id="playlist-name"></h2><p id="summary" class="muted"></p></div><button id="list-sort-toggle" class="ghost" type="button" aria-pressed="false">开始排序</button><button id="clear" class="ghost">清除本地记录</button></div><div id="songs" class="songs"></div></section>
+    <section id="rating-panel" class="import-card rating-panel"><label class="check-label"><input id="rating-enabled" type="checkbox">启用评分</label><div id="rating-settings" hidden><label for="rating-mode">评分方式</label><select id="rating-mode"><option value="stars">5 分制 · 半星</option><option value="levels">自定义等级</option></select><label for="rating-levels">自定义等级（从低到高，用逗号分隔）</label><input id="rating-levels" value="💣, C, B, A, A+"><p class="hint">点击或拖动星星即可打分；等级模式可编辑等级名称，留空表示尚未评分。</p></div></section>
   <footer class="site-footer">本工具用于整理个人音乐榜单，与音乐平台无关联。歌曲资料和封面归各权利人所有，数据来源以作品记录为准。<a href="LEGAL.md">使用与数据说明</a> · <a href="LICENSE">代码许可</a></footer></main>
   <script src="assets.js"></script>
   <script src="themes.js"></script>

@@ -2,7 +2,7 @@
   const key = 'annual-playlist:design:v1';
   const themes = window.PLAYLIST_THEMES;
   const formats = {portrait: {columns: 3, rows: 4}, square: {columns: 4, rows: 3}, wide: {columns: 6, rows: 2}};
-  let state = {theme: 'gallery', chartType: 'songs', ratio: 'portrait', coverMode: 'square', title: 'SOTY 2026', signature: 'MY YEAR IN MUSIC', labels: true, editorialPalette: 'acid', editorialBg: '#ddf23b', editorialAccent: '#da2578', art: 'covers'};
+  let state = {theme: 'gallery', chartType: 'songs', ratio: 'portrait', coverMode: 'square', title: 'SOTY 2026', signature: 'MY YEAR IN MUSIC', labels: true, editorialPalette: 'acid', editorialBg: '#ddf23b', editorialAccent: '#da2578', art: 'covers', ratingEnabled: false, ratingMode: 'stars', ratingLevels: '💣, C, B, A, A+', ratings: {}};
   try { Object.assign(state, JSON.parse(localStorage.getItem(key)) || {}); } catch (_) {}
   if (!themes.some(t => t.id === state.theme)) state.theme = themes[0].id;
   if (!formats[state.ratio]) state.ratio = 'portrait';
@@ -11,6 +11,7 @@
   if (!state.textEdits || typeof state.textEdits !== 'object') state.textEdits = {};
   let sorting = false, selected = new Set(), currentItems = [];
   if (!state.orders) state.orders = {};
+  if (!state.ratings || typeof state.ratings !== 'object') state.ratings = {};
   let data = null, sample = null, page = 0, imported = false;
   const $ = id => document.getElementById(id);
   const text = (tag, className, content) => { const node = document.createElement(tag); node.className = className; node.textContent = content; return node; };
@@ -21,6 +22,41 @@
     return state.textEdits[id] || (state.textEdits[id] = {});
   }
   function defaultTitle() { return state.chartType === 'albums' ? `${data.playlist.name} · 专辑榜` : data.playlist.name; }
+  function ratingKey(item, albumMode) { return `${albumMode ? 'albums' : 'songs'}:${chartItemKey(item, albumMode ? 'albums' : 'songs')}`; }
+  function rating(item, albumMode) { return state.ratings[ratingKey(item, albumMode)]; }
+  function levels() { return state.ratingLevels.split(',').map(value => value.trim()).filter(Boolean).slice(0, 20); }
+  function setRating(item, albumMode, value) { const key = ratingKey(item, albumMode); if (value === '' || value == null) delete state.ratings[key]; else state.ratings[key] = value; save(); render(); }
+  function ratingNode(item, albumMode, compact = false) {
+    const value = rating(item, albumMode);
+    if (!state.ratingEnabled || value == null || value === '') return null;
+    const node = text('span', `poster-rating${compact ? ' poster-rating--text' : ''}`, '');
+    if (state.ratingMode === 'stars') {
+      const numeric = Number(value);
+      node.textContent = '★'.repeat(Math.floor(numeric)) + (numeric % 1 ? '⯨' : '');
+      node.setAttribute('aria-label', `${numeric} 分`);
+    } else node.textContent = String(value);
+    return node;
+  }
+  function ratingControl(item, albumMode) {
+    const wrap = text('div', 'rating-control', '');
+    const current = rating(item, albumMode);
+    if (state.ratingMode === 'stars') {
+      const stars = text('div', 'star-slider', ''); stars.setAttribute('role', 'slider'); stars.setAttribute('aria-label', `${item.name} 评分`); stars.setAttribute('aria-valuemin', '0.5'); stars.setAttribute('aria-valuemax', '5'); stars.setAttribute('aria-valuenow', current || 0); stars.tabIndex = 0;
+      const fill = text('span', 'star-fill', '★★★★★'); fill.style.width = `${Math.max(0, Math.min(100, Number(current || 0) * 20))}%`; stars.append(text('span', 'star-empty', '★★★★★'), fill);
+      const scoreAt = event => { const rect = stars.getBoundingClientRect(); return Math.max(.5, Math.min(5, Math.round(((event.clientX - rect.left) / rect.width) * 10) / 2)); };
+      stars.addEventListener('pointerdown', event => { event.preventDefault(); stars.setPointerCapture(event.pointerId); fill.style.width = `${scoreAt(event) * 20}%`; });
+      stars.addEventListener('pointermove', event => { if (event.buttons || event.pressure > 0) fill.style.width = `${scoreAt(event) * 20}%`; });
+      stars.addEventListener('pointerup', event => setRating(item, albumMode, scoreAt(event)));
+      stars.addEventListener('keydown', event => { if (event.key === 'ArrowRight' || event.key === 'ArrowUp') { event.preventDefault(); setRating(item, albumMode, Math.min(5, Number(current || 0) + .5)); } if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') { event.preventDefault(); setRating(item, albumMode, Math.max(.5, Number(current || 0) - .5)); } });
+      wrap.append(stars, text('span', 'rating-value', current ? `${current}/5` : '未评分'));
+    } else {
+      const select = document.createElement('select'); select.className = 'level-select'; select.setAttribute('aria-label', `${item.name} 等级`);
+      const empty = document.createElement('option'); empty.value = ''; empty.textContent = '未评分'; select.append(empty);
+      levels().forEach((level, index) => { const option = document.createElement('option'); option.value = level; option.textContent = level; option.selected = current === level; select.append(option); });
+      select.addEventListener('change', () => setRating(item, albumMode, select.value)); wrap.append(select);
+    }
+    return wrap;
+  }
   function editable(tag, className, fallback, field, label, onChange) {
     const node = text(tag, className, edits()[field] ?? fallback);
     node.contentEditable = sorting ? 'false' : 'plaintext-only';
@@ -104,6 +140,7 @@
       }
       const itemKey = albumMode ? `album:${item.id}` : `item:${item.id}:${item.position ?? rank}`;
       frame.append(editable('span', 'poster-rank', String(rank).padStart(2, '0'), `${itemKey}:rank`, '排名文案'));
+      const badge = ratingNode(item, albumMode, state.art === 'text'); if (badge) frame.append(badge);
       const caption = text('figcaption', 'poster-caption', '');
       const name = item.name || `未匹配歌曲 ${item.id}`;
       caption.append(editable('div', 'poster-song', name, `${itemKey}:name`, albumMode ? '专辑名' : '歌名'), editable('div', 'poster-artist', (item.artists || []).map(a => a.name).join(' / ') || '待补全', `${itemKey}:artist`, '音乐人'));
@@ -189,7 +226,9 @@
           showStatus(`已删除${albumMode ? '专辑' : '歌曲'}「${item.name || item.id}」`);
         } catch (error) { remove.disabled = false; showStatus(error.message || '删除失败', true); }
       });
-      card.append(image, info, remove, coverTools); decorateSortCard(card, item, index + 1); return card;
+      card.append(image, info, remove, coverTools);
+      if (state.ratingEnabled) card.append(ratingControl(item, albumMode));
+      decorateSortCard(card, item, index + 1); return card;
     });
     $('songs').replaceChildren(...cards);
     // Preserve access to tracks that cannot be assigned to an album.
@@ -199,6 +238,39 @@
     }
   }
   for (const id of ['sort-toggle', 'list-sort-toggle']) $(id).addEventListener('click', () => { sorting = !sorting; selected.clear(); render(); });
+  $('rating-enabled').checked = state.ratingEnabled;
+  $('rating-mode').value = state.ratingMode;
+  $('rating-levels').value = state.ratingLevels;
+  $('rating-settings').hidden = !state.ratingEnabled;
+  $('rating-enabled').addEventListener('change', () => { state.ratingEnabled = $('rating-enabled').checked; $('rating-settings').hidden = !state.ratingEnabled; save(); render(); });
+  $('rating-mode').addEventListener('change', () => { state.ratingMode = $('rating-mode').value; save(); render(); });
+  $('rating-levels').addEventListener('input', () => { state.ratingLevels = $('rating-levels').value; save(); render(); });
+  $('sort-method').addEventListener('change', () => { $('sort-info').textContent = '选择“应用排序”后才会重排；完成后仍可手动拖拽。'; });
+  $('apply-sort').addEventListener('click', () => {
+    if (!data) return;
+    const method = $('sort-method').value; const albumMode = state.chartType === 'albums';
+    if (method === 'manual') { delete state.orders[editKey()]; save(); render(); return; }
+    const ordered = [...currentItems];
+    const original = new Map(ordered.map((item, index) => [chartItemKey(item, state.chartType), index]));
+    if (method === 'rating-desc' || method === 'rating-asc') {
+      ordered.sort((a, b) => {
+        const av = rating(a, albumMode), bv = rating(b, albumMode), missingA = av == null || av === '', missingB = bv == null || bv === '';
+        if (missingA !== missingB) return missingA ? 1 : -1;
+        if (missingA) return original.get(chartItemKey(a, state.chartType)) - original.get(chartItemKey(b, state.chartType));
+        const score = state.ratingMode === 'stars' ? Number(av) : levels().indexOf(String(av));
+        const other = state.ratingMode === 'stars' ? Number(bv) : levels().indexOf(String(bv));
+        return (method === 'rating-desc' ? other - score : score - other) || original.get(chartItemKey(a, state.chartType)) - original.get(chartItemKey(b, state.chartType));
+      });
+    } else {
+      const collator = new Intl.Collator(['zh-CN', 'en'], {numeric: true, sensitivity: 'base'});
+      ordered.sort((a, b) => {
+        const av = method === 'artist' ? (a.artists || []).map(x => x.name).join(' ') : a.name || '';
+        const bv = method === 'artist' ? (b.artists || []).map(x => x.name).join(' ') : b.name || '';
+        return collator.compare(av, bv) || original.get(chartItemKey(a, state.chartType)) - original.get(chartItemKey(b, state.chartType));
+      });
+    }
+    state.orders[editKey()] = ordered.map(item => chartItemKey(item, state.chartType)); selected.clear(); page = 0; save(); render(); $('sort-info').textContent = '排序已应用，可继续手动拖拽调整。';
+  });
   installChartDrag({
     active: () => sorting,
     selection: () => selected,
@@ -263,6 +335,8 @@
     for (const [id, property] of [['chart-type','chartType'],['poster-title','title'],['poster-signature','signature'],['poster-ratio','ratio'],['poster-cover-mode','coverMode'],['poster-labels','labels'],['export-art','art'],['editorial-palette','editorialPalette'],['editorial-bg','editorialBg'],['editorial-accent','editorialAccent']]) {
       const control = $(id); control[control.type === 'checkbox' ? 'checked' : 'value'] = state[property];
     }
+    $('rating-enabled').checked = Boolean(state.ratingEnabled); $('rating-settings').hidden = !state.ratingEnabled;
+    $('rating-mode').value = state.ratingMode === 'levels' ? 'levels' : 'stars'; $('rating-levels').value = state.ratingLevels || '💣, C, B, A, A+';
     save(); await window.updateImportedData(project.playlist, true);
   };
   window.addChartItem = async entry => {
@@ -292,6 +366,7 @@
       delete data.coverOverrides[key];
       delete data.coverOverrides[key.replace(/^song:/, 'album:')];
     }
+    for (const key of removedKeys) { delete state.ratings[`songs:${key}`]; delete state.ratings[`albums:${key}`]; }
     for (const chartType of ['songs', 'albums']) {
       const id = `${data.playlist.id}${chartType === 'albums' ? ':albums' : ''}`;
       state.orders[id] = (state.orders[id] || []).filter(key => !removedKeys.has(key));
