@@ -18,10 +18,9 @@
   });
   async function add(entry, image) {
     if(!window.getProjectState().playlist)throw new Error('请先新建榜单');
-    let missing=false;
-    if(image){try{entry.album.cover=await ChartAssets.cover(image);}catch(_){entry.album.cover='';entry.album.sourceCover=image;missing=true;}}
+    if(image){entry.album.cover=image;entry.album.sourceCover=image;}
     await window.addChartItem(entry);
-    status.textContent=missing?'作品已加入并保存；封面暂未取得，可在列表上传补全。':'作品已加入并保存，封面已缓存到此设备。';
+    status.textContent=image?'作品已加入并保存；在线封面使用来源链接加载。':'作品已加入并保存。';
   }
   $('search-form').addEventListener('submit',async event=>{
     event.preventDefault();const query=$('search-query').value.trim();if(!query)return;

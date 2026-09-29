@@ -106,7 +106,7 @@
     const overrides = data.coverOverrides || {};
     chart.items = chart.items.map(item => {
       const cover = overrides[chartItemKey(item, state.chartType)];
-      return cover ? {...item, album: {...item.album, cover: cover.data || '', sourceCover: cover.source || ''}} : item;
+      return cover ? {...item, album: {...item.album, cover: cover.data || cover.source || '', sourceCover: cover.source || ''}} : item;
     });
     return chart;
   }
@@ -226,12 +226,16 @@
       };
       file.addEventListener('change', async () => {
         const selectedFile = file.files?.[0]; if (!selectedFile) return;
-        try { await setCover(await ChartAssets.normalize(selectedFile)); }
+        try { await setCover(await ChartAssets.normalize(selectedFile), ''); }
         catch (error) { showStatus(error.message, true); }
       });
       applyUrl.addEventListener('click', async () => {
         const value = urlInput.value.trim(); applyUrl.disabled = true;
-        try { await setCover(value ? await ChartAssets.cover(value) : '', value); showStatus('封面已保存到此设备'); }
+        try {
+          if (value && !/^https?:\/\//i.test(value)) throw new Error('请输入图片链接');
+          await setCover('', value);
+          showStatus(value ? '已保存封面链接；图片会从来源地址加载。' : '已恢复原始封面');
+        }
         catch (error) { showStatus(error.message + '；原封面保持不变。', true); }
         finally { applyUrl.disabled = false; }
       });

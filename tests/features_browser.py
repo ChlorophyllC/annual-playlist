@@ -26,13 +26,15 @@ with sync_playwright() as p:
   page.locator('.cover-file').first.set_input_files({'name':'replacement.png','mimeType':'image/png','buffer':cover})
   page.wait_for_function("Object.keys(window.getProjectState().playlist.coverOverrides||{}).length===1")
   with page.expect_download() as d:page.locator('#project-export').click()
-  project=json.load(open(d.value.path()));assert project['playlist']['coverOverrides'];assert list(project['playlist']['coverOverrides'].values())[0]['data'].startswith('data:image/')
+  with zipfile.ZipFile(d.value.path()) as archive:
+   project_bytes=archive.read('project.json');project=json.loads(project_bytes);asset_names=[name for name in archive.namelist() if name.startswith('assets/')]
+  assert project['playlist']['coverOverrides'];assert list(project['playlist']['coverOverrides'].values())[0]['data'].startswith('assets/');assert len(asset_names)==1
   page.reload();page.wait_for_selector('.poster-item');assert page.locator('.poster-song').first.inner_text()=='独立专辑'
   page.evaluate("document.querySelectorAll('.control-card').forEach(el => el.open = true)")
   # Reopen the saved project in a fresh tab after blocking all image/API access.
   fresh=b.new_page(accept_downloads=True);fresh.route('**/api/**',lambda r:r.abort());fresh.route('https://**',lambda r:r.abort());fresh.goto('http://127.0.0.1:8000');fresh.wait_for_selector('.poster-item')
   fresh.evaluate("document.querySelectorAll('.control-card').forEach(el => el.open = true)")
-  fresh.locator('#project-import').set_input_files({'name':'test.annual.json','mimeType':'application/json','buffer':json.dumps(project).encode()});fresh.wait_for_function("document.querySelector('.poster-song').textContent==='独立专辑'")
+  fresh.locator('#project-import').set_input_files({'name':'test.annual.zip','mimeType':'application/zip','buffer':open(d.value.path(),'rb').read()});fresh.wait_for_function("document.querySelector('.poster-song').textContent==='独立专辑'")
   assert fresh.locator('.poster-cover img').get_attribute('src').startswith('data:image/')
   with fresh.expect_download() as out:fresh.locator('#export-button').click()
   assert len(open(out.value.path(),'rb').read())>1000
@@ -44,7 +46,8 @@ with sync_playwright() as p:
   with fresh.expect_download() as out:fresh.locator('#export-button').click()
   assert '未取得' in fresh.locator('#export-status').inner_text()
   with fresh.expect_download() as out:fresh.locator('#project-export').click()
-  missing=json.load(open(out.value.path()));assert len(missing['missingCovers'])==1
+  with zipfile.ZipFile(out.value.path()) as archive:
+   missing=json.loads(archive.read('project.json'));assert missing['playlist']['items'][-1]['album']['cover']=='https://p1.music.126.net/missing.jpg'
   assert not errors,errors
   print('PASS',engine.name,'compact image, manual album, upload override, palette, IndexedDB reload, offline project, TXT, incomplete cover export',flush=True)
   b.close()

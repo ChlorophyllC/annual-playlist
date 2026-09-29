@@ -19,10 +19,25 @@ window.ChartAssets = (() => {
   }
   async function restore() {
     const databaseRef = await database();
-    return new Promise((resolve, reject) => {
+    const value = await new Promise((resolve, reject) => {
       const r = databaseRef.transaction('projects').objectStore('projects').get('current');
       r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
     });
+    // Migrate older drafts that persisted downloaded remote covers. Keep their URLs,
+    // but retain data URLs only for user-provided images with no remote source.
+    let changed = false;
+    for (const item of value?.items || []) {
+      if (item.album?.cover?.startsWith('data:image/') && item.album.sourceCover?.startsWith('http')) {
+        item.album.cover = item.album.sourceCover; changed = true;
+      }
+    }
+    for (const cover of Object.values(value?.coverOverrides || {})) {
+      if (cover.data?.startsWith('data:image/') && cover.source?.startsWith('http')) {
+        cover.data = ''; changed = true;
+      }
+    }
+    if (changed) await store(value);
+    return value;
   }
   async function clear() {
     const databaseRef = await database();
