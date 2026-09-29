@@ -26,13 +26,23 @@
   function rating(item, albumMode) { return state.ratings[ratingKey(item, albumMode)]; }
   function levels() { return state.ratingLevels.split(',').map(value => value.trim()).filter(Boolean).slice(0, 20); }
   function setRating(item, albumMode, value) { const key = ratingKey(item, albumMode); if (value === '' || value == null) delete state.ratings[key]; else state.ratings[key] = value; save(); render(); }
+  function paintStars(container, value) {
+    container.replaceChildren();
+    const score = Number(value || 0);
+    for (let index = 1; index <= 5; index++) {
+      const star = text('span', 'rating-star', '★');
+      if (score >= index) star.classList.add('is-full');
+      else if (score >= index - .5) star.classList.add('is-half');
+      container.append(star);
+    }
+  }
   function ratingNode(item, albumMode, compact = false) {
     const value = rating(item, albumMode);
     if (!state.ratingEnabled || value == null || value === '') return null;
     const node = text('span', `poster-rating${compact ? ' poster-rating--text' : ''}`, '');
     if (state.ratingMode === 'stars') {
       const numeric = Number(value);
-      node.textContent = '★'.repeat(Math.floor(numeric)) + (numeric % 1 ? '⯨' : '');
+      paintStars(node, numeric);
       node.setAttribute('aria-label', `${numeric} 分`);
     } else node.textContent = String(value);
     return node;
@@ -41,11 +51,11 @@
     const wrap = text('div', 'rating-control', '');
     const current = rating(item, albumMode);
     if (state.ratingMode === 'stars') {
-      const stars = text('div', 'star-slider', ''); stars.setAttribute('role', 'slider'); stars.setAttribute('aria-label', `${item.name} 评分`); stars.setAttribute('aria-valuemin', '0.5'); stars.setAttribute('aria-valuemax', '5'); stars.setAttribute('aria-valuenow', current || 0); stars.tabIndex = 0;
-      const fill = text('span', 'star-fill', '★★★★★'); fill.style.width = `${Math.max(0, Math.min(100, Number(current || 0) * 20))}%`; stars.append(text('span', 'star-empty', '★★★★★'), fill);
-      const scoreAt = event => { const rect = stars.getBoundingClientRect(); return Math.max(.5, Math.min(5, Math.round(((event.clientX - rect.left) / rect.width) * 10) / 2)); };
-      stars.addEventListener('pointerdown', event => { event.preventDefault(); stars.setPointerCapture(event.pointerId); fill.style.width = `${scoreAt(event) * 20}%`; });
-      stars.addEventListener('pointermove', event => { if (event.buttons || event.pressure > 0) fill.style.width = `${scoreAt(event) * 20}%`; });
+      const stars = text('div', 'star-slider', ''); stars.setAttribute('role', 'slider'); stars.setAttribute('aria-label', `${item.name} 评分`); stars.setAttribute('aria-valuemin', '0'); stars.setAttribute('aria-valuemax', '5'); stars.setAttribute('aria-valuenow', current || 0); stars.tabIndex = 0; paintStars(stars, current);
+      const scoreAt = event => { const rect = stars.getBoundingClientRect(); const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)); return ratio === 0 ? '' : Math.round(ratio * 10) / 2; };
+      const preview = event => paintStars(stars, scoreAt(event));
+      stars.addEventListener('pointerdown', event => { event.preventDefault(); stars.setPointerCapture(event.pointerId); preview(event); });
+      stars.addEventListener('pointermove', event => { if (event.buttons || event.pressure > 0) preview(event); });
       stars.addEventListener('pointerup', event => setRating(item, albumMode, scoreAt(event)));
       stars.addEventListener('keydown', event => { if (event.key === 'ArrowRight' || event.key === 'ArrowUp') { event.preventDefault(); setRating(item, albumMode, Math.min(5, Number(current || 0) + .5)); } if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') { event.preventDefault(); setRating(item, albumMode, Math.max(.5, Number(current || 0) - .5)); } });
       wrap.append(stars, text('span', 'rating-value', current ? `${current}/5` : '未评分'));
@@ -245,8 +255,7 @@
   $('rating-enabled').addEventListener('change', () => { state.ratingEnabled = $('rating-enabled').checked; $('rating-settings').hidden = !state.ratingEnabled; save(); render(); });
   $('rating-mode').addEventListener('change', () => { state.ratingMode = $('rating-mode').value; save(); render(); });
   $('rating-levels').addEventListener('input', () => { state.ratingLevels = $('rating-levels').value; save(); render(); });
-  $('sort-method').addEventListener('change', () => { $('sort-info').textContent = '选择“应用排序”后才会重排；完成后仍可手动拖拽。'; });
-  $('apply-sort').addEventListener('click', () => {
+  function applySort() {
     if (!data) return;
     const method = $('sort-method').value; const albumMode = state.chartType === 'albums';
     if (method === 'manual') { delete state.orders[editKey()]; save(); render(); return; }
@@ -270,7 +279,8 @@
       });
     }
     state.orders[editKey()] = ordered.map(item => chartItemKey(item, state.chartType)); selected.clear(); page = 0; save(); render(); $('sort-info').textContent = '排序已应用，可继续手动拖拽调整。';
-  });
+  }
+  $('sort-method').addEventListener('change', applySort);
   installChartDrag({
     active: () => sorting,
     selection: () => selected,
