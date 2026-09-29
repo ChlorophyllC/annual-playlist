@@ -13,7 +13,7 @@
       return {x: r.left - bounds.left, y: r.top - bounds.top, width: r.width, height: r.height};
     };
     const rootStyle = getComputedStyle(poster);
-    const boxes = [], images = [], texts = [];
+    const boxes = [], images = [], texts = [], custom = [];
     function box(element) {
       const style = getComputedStyle(element), rect = relative(element);
       boxes.push({...rect, color: style.backgroundColor, border: parseFloat(style.borderTopWidth) || 0, borderColor: style.borderTopColor});
@@ -59,10 +59,15 @@
           ellipsis: style.textOverflow === 'ellipsis', uppercase: style.textTransform === 'uppercase'});
       } finally { element.style.transform = savedTransform; }
     }
+    for (const element of poster.querySelectorAll('.custom-poster-element')) {
+      const style = getComputedStyle(element), rect = relative(element);
+      const matrix = new DOMMatrix(style.transform === 'none' ? undefined : style.transform);
+      custom.push({x: rect.x, y: rect.y, width: rect.width, height: rect.height, url: element.tagName === 'IMG' ? element.src : '', text: element.tagName === 'IMG' ? '' : element.textContent, font: `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`, color: style.color, angle: Math.atan2(matrix.b, matrix.a) || 0});
+    }
     box(poster.querySelector('.poster-footer'));
     const theme = [...poster.classList].find(value => value.startsWith('poster--'))?.replace('poster--', '') || 'gallery';
     return {width: bounds.width, height: bounds.height, background: rootStyle.backgroundColor, theme,
-      texture: poster.classList.contains('poster--editorial'), boxes, images, texts};
+      texture: poster.classList.contains('poster--editorial'), boxes, images, texts, custom};
   }
 
   function asDataURL(blob) {
@@ -100,7 +105,8 @@
       context.setTransform(1, 0, 0, 1, 0, 0); context.fillStyle = '#f3a43b'; context.beginPath(); context.arc(width * 1.04, -height * .01, width * .17, 0, Math.PI * 2); context.fill();
     } else if (theme === 'autumn') {
       context.strokeStyle = '#b5533666'; context.lineWidth = Math.max(1, width * .001); context.strokeRect(width * .018, height * .018, width * .964, height * .964);
-      context.fillStyle = '#b55336aa'; context.font = `${Math.max(10, width * .028)}px serif`; context.fillText('◆', width * .9, height * .94);
+      context.fillStyle = '#b55336d9'; context.save(); context.translate(width * .9, height * .13); context.rotate(.28);
+      context.beginPath(); context.moveTo(0, -height * .055); context.lineTo(width * .012, -height * .018); context.lineTo(width * .045, -height * .03); context.lineTo(width * .032, height * .008); context.lineTo(width * .07, height * .025); context.lineTo(width * .032, height * .04); context.lineTo(width * .045, height * .075); context.lineTo(width * .012, height * .055); context.lineTo(0, height * .095); context.lineTo(-width * .012, height * .055); context.lineTo(-width * .045, height * .075); context.lineTo(-width * .032, height * .04); context.lineTo(-width * .07, height * .025); context.lineTo(-width * .032, height * .008); context.lineTo(-width * .045, -height * .03); context.lineTo(-width * .012, -height * .018); context.closePath(); context.fill(); context.restore();
     } else if (theme === 'winter') {
       context.strokeStyle = '#6ca9b833'; context.lineWidth = Math.max(1, width * .0008);
       for (let x = width * .08; x < width; x += width * .08) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
@@ -142,6 +148,17 @@
         const descent = metrics.fontBoundingBoxDescent ?? text.fontSize * .2;
         const baseline = line.y + (line.height - ascent - descent) / 2 + ascent;
         context.fillText(value, line.x, baseline);
+      }
+      context.restore();
+    }
+    for (const item of snapshot.custom || []) {
+      context.save();
+      const cx = item.x + item.width / 2, cy = item.y + item.height / 2;
+      context.translate(cx, cy); context.rotate(item.angle || 0); context.translate(-cx, -cy);
+      if (item.url) {
+        try { const image = await loadImage(item.url); context.drawImage(image, item.x, item.y, item.width, item.height); } catch (_) {}
+      } else if (item.text) {
+        context.font = item.font; context.fillStyle = item.color; context.textBaseline = 'top'; context.fillText(item.text, item.x, item.y, item.width);
       }
       context.restore();
     }
