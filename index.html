@@ -74,8 +74,9 @@
     </section>
     <section class="import-card">
       <label for="playlist-url">网易云歌单链接</label>
-      <div class="form-row"><input id="playlist-url" value="https://music.163.com/playlist?id=18081287035" placeholder="粘贴歌单链接或输入歌单 ID" /><button id="import">导入歌单 <span>→</span></button></div>
-      <p class="hint">支持网易云分享文字、短链接和歌单 ID；每次重新读取前 100 首，并重置该歌单的文字修改和排序。</p>
+      <div class="form-row"><input id="playlist-url" value="https://music.163.com/playlist?id=18081287035" placeholder="粘贴歌单链接或输入歌单 ID" /><button id="import">导入指定区间 <span>→</span></button></div>
+      <div class="playlist-range"><label>从第 <input id="playlist-start" type="number" min="1" value="1" inputmode="numeric"></label><label>到第 <input id="playlist-end" type="number" min="1" value="100" inputmode="numeric"></label><button id="import-next" class="ghost" type="button" disabled>继续导入下一页</button></div>
+      <p class="hint">每次最多导入 100 首。可指定任意连续区间，例如 101–200；歌单总数会保留，分批导入会追加到当前榜单。</p>
     </section>
     <section id="status" class="status" hidden></section><div id="undo-bar" class="undo-bar" hidden><span id="undo-message"></span><button id="undo-delete" type="button">撤销</button></div>
     <section id="result" hidden><div class="result-head"><div><p class="eyebrow">IMPORT RESULT</p><h2 id="playlist-name"></h2><p id="summary" class="muted"></p></div><button id="list-sort-toggle" class="ghost" type="button" aria-pressed="false">开始排序</button><button id="clear" class="ghost">清除本地记录</button></div><div id="songs" class="songs"></div></section>

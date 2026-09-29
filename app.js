@@ -1,5 +1,8 @@
 const input = document.querySelector('#playlist-url');
 const importButton = document.querySelector('#import');
+const startInput = document.querySelector('#playlist-start');
+const endInput = document.querySelector('#playlist-end');
+const nextButton = document.querySelector('#import-next');
 const status = document.querySelector('#status');
 const result = document.querySelector('#result');
 const savedKey = 'annual-playlist:last-import';
@@ -57,20 +60,32 @@ window.updateImportedData = async (data, replace = false) => {
   try { setSaveState('正在保存…'); await ChartAssets.store(data); setSaveState('已保存'); }
   catch (_) { setSaveState('保存失败', true); showStatus('设备空间不足或浏览器禁止保存，请下载工程文件备份。', true); throw new Error('自动保存失败，请下载工程文件'); }
 };
-async function importPlaylist() {
-  importButton.disabled = true; showStatus('正在读取歌单，并匹配歌曲详情…');
+async function importPlaylist(append = false) {
+  const start = Math.max(1, Number(startInput.value) || 1), end = Math.max(start, Number(endInput.value) || start + 99);
+  if (end - start + 1 > 100) { showStatus('每次最多导入 100 首，请调整起止位置。', true); return; }
+  importButton.disabled = true; nextButton.disabled = true; showStatus(`正在读取第 ${start}–${end} 首，并匹配歌曲详情…`);
   try {
-    const response = await fetch(ChartAssets.api('api/import'), {cache:'no-store',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value})});
+    const response = await fetch(ChartAssets.api('api/import'), {cache:'no-store',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value,start,end})});
     const data = await response.json(); if (!response.ok) throw new Error(data.error || '导入失败');
-    window.dispatchEvent(new CustomEvent('playlist-refresh', {detail: data.playlist.id}));
-    await window.updateImportedData(data, true); updateWorkspaceStatus(data);
-    showStatus(`已读取 ${data.sourceCount} 首，匹配 ${data.items.filter(x=>x.matched).length} 首，已保存到此设备。${data.truncated ? '歌单超过 100 首，仅导入前 100 首。' : ''}`);
-  } catch (error) { showStatus(error.message, true); } finally { importButton.disabled = !ChartAssets.localServer(); }
+    let result = data;
+    const previous = window.getProjectState().playlist;
+    if (append && previous?.playlist?.id === data.playlist.id) {
+      const existing = new Map(previous.items.map(item => [Number(item.position), item]));
+      data.items.forEach(item => existing.set(Number(item.position), item));
+      result = {...data, items: [...existing.values()].sort((a,b) => a.position - b.position)};
+    } else window.dispatchEvent(new CustomEvent('playlist-refresh', {detail: data.playlist.id}));
+    await window.updateImportedData(result, true); updateWorkspaceStatus(result);
+    startInput.value = data.rangeEnd + 1; endInput.value = Math.min(data.rangeEnd + 100, data.sourceCount);
+    nextButton.disabled = !data.hasMore;
+    showStatus(`已读取第 ${data.rangeStart}–${data.rangeEnd} 首，匹配 ${data.items.filter(x=>x.matched).length} 首；当前已保存 ${result.items.length} 首。${data.hasMore ? '可以继续导入下一页。' : '已到歌单末尾。'}`);
+  } catch (error) { showStatus(error.message, true); nextButton.disabled = false; } finally { importButton.disabled = !ChartAssets.localServer(); }
 }
-importButton.addEventListener('click',importPlaylist);
-input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!importButton.disabled)importPlaylist();});
+importButton.addEventListener('click',() => importPlaylist(false));
+nextButton.addEventListener('click',() => importPlaylist(true));
+input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!importButton.disabled)importPlaylist(false);});
 if (!ChartAssets.localServer()) {
   importButton.disabled = true; input.disabled = true;
+  nextButton.disabled = true;
   input.closest('section').querySelector('.hint').textContent = '此静态版本支持手动添加与工程文件。网易云链接导入需运行本地服务，详见使用说明。';
 }
 document.querySelector('#clear').addEventListener('click',async()=>{

@@ -22,7 +22,7 @@ localStorage.setItem('annual-playlist:backend', 'https://annual-playlist-netease
 部署包含绑定的完整配置：在项目目录运行 `npx wrangler deploy --config workers/wrangler.toml`（需 Cloudflare 登录）。或者在 Dashboard 添加 Rate limiting 绑定，名称 `IMPORT_LIMITER`，namespace ID `1001`，每 60 秒 5 次，然后重新部署。仅粘贴 JS 不会创建此绑定。
 
 - 支持分享文字、163cn.tv HTTP 重定向、移动端完整歌单 URL；最多 5 次跳转，仅允许网易云域名，不转发用户凭证。若短链返回 HTML/脚本跳转，请在浏览器打开后复制地址。
-- 每次只查询前 100 首的详情；响应包含原始数量和截断标记。
+- 支持按起止位置分段查询，每次最多 100 首；响应包含歌单总数、当前区间和是否还有下一页。
 - POST JSON，请求体最多 4 KiB；导入和上游请求禁用缓存；上游请求超时 8/12 秒。
 - 只向允许的网站 Origin 开放 CORS（GitHub Pages、本项目 Pages 预览域名、本地开发地址，也可用 `SITE_ORIGIN` 环境变量添加一个正式域名）；CORS 并非身份验证，非浏览器客户端仍可访问。
 - 每 IP 每分钟最多 5 次。未配置绑定时只有实例内临时限流；绑定也不是全球精确额度计数。

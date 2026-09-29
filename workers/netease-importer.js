@@ -44,19 +44,26 @@ function limited(ip) {
   if (!requests.has(ip)) { if (requests.size >= 2000) return true; requests.set(ip, {count: 0, until: now + 60000}); }
   return ++requests.get(ip).count > 5;
 }
-async function importPlaylist(value) {
+function pageRange(start, end) {
+  const first = Number.isInteger(start) ? start : 1;
+  const last = Number.isInteger(end) ? end : Math.min(100, first + 99);
+  if (first < 1 || last < first || last - first + 1 > 100) throw new Error('每次最多导入 100 首，请调整起止位置');
+  return {start: first, end: last};
+}
+async function importPlaylist(value, requestedStart, requestedEnd) {
+  const range = pageRange(requestedStart, requestedEnd);
   const id = await resolveId(value); if (!id) throw new Error('无法识别网易云歌单 ID');
   const detail = await api(`https://music.163.com/api/v6/playlist/detail?id=${id}&n=100`);
   if (detail.code !== 200 || !detail.playlist) throw new Error('歌单不可访问或已下架');
-  const playlist = detail.playlist; const ids = (playlist.trackIds || []).map(item => item.id).filter(Boolean); const sourceCount = ids.length; ids.splice(100); const songs = [];
+  const playlist = detail.playlist; const allIds = (playlist.trackIds || []).map(item => item.id).filter(Boolean); const sourceCount = allIds.length; const ids = allIds.slice(range.start - 1, range.end); const songs = [];
   for (let start = 0; start < ids.length; start += 300) {
     const response = await api('https://music.163.com/api/v3/song/detail', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `c=${encodeURIComponent(JSON.stringify(ids.slice(start, start + 300).map(id => ({id}))))}`});
     if (response.code !== 200) throw new Error('歌曲详情请求失败');
     songs.push(...(response.songs || []));
   }
   const byId = new Map(songs.map(song => [String(song.id), song]));
-  const items = ids.map((id, position) => { const song = byId.get(String(id)); if (!song) return {id, position, matched: false}; const album = song.al || {}; return {id: song.id, position, matched: true, name: song.name || '', artists: (song.ar || []).map(artist => ({id: artist.id, name: artist.name})), album: {id: album.id, name: album.name || '', cover: album.picUrl || ''}, duration: song.dt || 0, url: `https://music.163.com/#/song?id=${song.id}`}; });
-  return {playlist: {id, name: playlist.name || '未命名歌单', count: playlist.trackCount || ids.length}, items, sourceCount, truncated: sourceCount > 100};
+  const items = ids.map((id, index) => { const position = range.start - 1 + index; const song = byId.get(String(id)); if (!song) return {id, position, matched: false}; const album = song.al || {}; return {id: song.id, position, matched: true, name: song.name || '', artists: (song.ar || []).map(artist => ({id: artist.id, name: artist.name})), album: {id: album.id, name: album.name || '', cover: album.picUrl || ''}, duration: song.dt || 0, url: `https://music.163.com/#/song?id=${song.id}`}; });
+  return {playlist: {id, name: playlist.name || '未命名歌单', count: playlist.trackCount || sourceCount}, items, sourceCount, rangeStart: range.start, rangeEnd: Math.min(range.end, sourceCount), hasMore: range.end < sourceCount};
 }
 async function searchMusic(query, type) {
   if (typeof query !== 'string' || !query.trim() || query.length > 120) throw new Error('请输入 1 至 120 个字符的搜索词');
@@ -103,7 +110,7 @@ export default {async fetch(request, env = {}) {
     while (true) { const {done, value} = await reader.read(); if (done) break; size += value.byteLength; if (size > 4096) { await reader.cancel(); return json({error: '请求过大'}, 413); } chunks.push(value); }
     const body = JSON.parse(await new Blob(chunks).text());
     if (pathname === '/api/search') return json(await searchMusic(body.query, body.type));
-    return json(await importPlaylist(body.url));
+    return json(await importPlaylist(body.url, body.start, body.end));
   } catch (error) {
     const message = error?.name === 'TimeoutError' ? '请求超时，请稍后重试' : (error?.message || '请求失败');
     return json({error: message === 'The string did not match the expected pattern.' ? '网易云搜索服务暂时不可用，请稍后重试（请确认 Worker 已重新部署）' : message}, 400);

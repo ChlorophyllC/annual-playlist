@@ -78,7 +78,14 @@ def playlist_id(value):
         url = response.stdout.decode().strip()
     raise ValueError("无法解析分享链接，请在浏览器打开后复制完整歌单地址")
 
-def fetch_playlist(value):
+def fetch_playlist(value, requested_start=1, requested_end=100):
+    try:
+        start = int(requested_start or 1)
+        end = int(requested_end or min(100, start + 99))
+    except (TypeError, ValueError):
+        raise ValueError("起止位置必须是整数")
+    if start < 1 or end < start or end - start + 1 > 100:
+        raise ValueError("每次最多导入 100 首，请调整起止位置")
     pid = playlist_id(value)
     detail = get_json(f"https://music.163.com/api/v6/playlist/detail?id={pid}&n=100")
     if detail.get("code") != 200 or not detail.get("playlist"):
@@ -86,7 +93,7 @@ def fetch_playlist(value):
     playlist = detail["playlist"]
     ids = [item.get("id") for item in playlist.get("trackIds", []) if item.get("id")]
     source_count = len(ids)
-    ids = ids[:100]
+    ids = ids[start - 1:end]
     songs = []
     for start in range(0, len(ids), 300):
         payload = json.dumps([{"id": song_id} for song_id in ids[start:start + 300]], separators=(",", ":")).encode()
@@ -96,7 +103,8 @@ def fetch_playlist(value):
         songs.extend(result.get("songs", []))
     by_id = {str(song.get("id")): song for song in songs}
     items = []
-    for position, song_id in enumerate(ids):
+    for index, song_id in enumerate(ids):
+        position = start - 1 + index
         song = by_id.get(str(song_id))
         if not song:
             items.append({"id": song_id, "position": position, "matched": False})
@@ -111,7 +119,7 @@ def fetch_playlist(value):
             "duration": song.get("dt") or song.get("duration") or 0,
             "url": f"https://music.163.com/#/song?id={song.get('id')}"
         })
-    return {"playlist": {"id": pid, "name": playlist.get("name", "未命名歌单"), "count": playlist.get("trackCount", len(ids))}, "items": items, "sourceCount": source_count, "truncated": source_count > 100}
+    return {"playlist": {"id": pid, "name": playlist.get("name", "未命名歌单"), "count": playlist.get("trackCount", source_count)}, "items": items, "sourceCount": source_count, "rangeStart": start, "rangeEnd": min(end, source_count), "hasMore": end < source_count}
 
 def search_netease(query, chart_type):
     if not isinstance(query, str) or not query.strip() or len(query) > 120:
@@ -173,7 +181,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not 0 < length <= 4096:
                 raise ValueError("请求大小须在 1–4096 字节之间")
             body = json.loads(self.rfile.read(length) or b"{}")
-            result = search_netease(body.get("query", ""), body.get("type")) if path == "/api/search" else fetch_playlist(body.get("url", ""))
+            result = search_netease(body.get("query", ""), body.get("type")) if path == "/api/search" else fetch_playlist(body.get("url", ""), body.get("start", 1), body.get("end", 100))
             raw = json.dumps(result, ensure_ascii=False).encode()
             self.send_response(200)
         except Exception as error:
