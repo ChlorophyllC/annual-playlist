@@ -60,7 +60,8 @@
       } finally { element.style.transform = savedTransform; }
     }
     box(poster.querySelector('.poster-footer'));
-    return {width: bounds.width, height: bounds.height, background: rootStyle.backgroundColor,
+    const theme = [...poster.classList].find(value => value.startsWith('poster--'))?.replace('poster--', '') || 'gallery';
+    return {width: bounds.width, height: bounds.height, background: rootStyle.backgroundColor, theme,
       texture: poster.classList.contains('poster--editorial'), boxes, images, texts};
   }
 
@@ -79,7 +80,7 @@
     });
   }
   async function rasterize(snapshot, longEdge, format, covers) {
-    const {width, height} = snapshot;
+    const {width, height, theme} = snapshot;
     const scale = longEdge / Math.max(width, height);
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
@@ -87,6 +88,26 @@
     if (!context) throw new Error('浏览器无法创建图片画布');
     context.scale(canvas.width / width, canvas.height / height);
     context.fillStyle = snapshot.background; context.fillRect(0, 0, width, height);
+    context.save();
+    if (theme === 'spring') {
+      context.strokeStyle = '#d36f8355'; context.lineWidth = Math.max(1, width * .001);
+      context.beginPath(); context.arc(width * 1.04, -height * .01, width * .16, 0, Math.PI * 2); context.stroke();
+      context.beginPath(); context.arc(width * 1.04, -height * .01, width * .19, 0, Math.PI * 2); context.stroke();
+      context.fillStyle = '#d36f83aa'; context.font = `${Math.max(10, width * .035)}px serif`; context.fillText('*', width * .035, height * .94);
+    } else if (theme === 'summer') {
+      context.fillStyle = '#e56e3520'; context.translate(width * .5, height * .5); context.rotate(-Math.PI / 5);
+      for (let x = -width; x < width; x += width * .06) context.fillRect(x, -height, width * .012, height * 2);
+      context.setTransform(1, 0, 0, 1, 0, 0); context.fillStyle = '#f3a43b'; context.beginPath(); context.arc(width * 1.04, -height * .01, width * .17, 0, Math.PI * 2); context.fill();
+    } else if (theme === 'autumn') {
+      context.strokeStyle = '#b5533666'; context.lineWidth = Math.max(1, width * .001); context.strokeRect(width * .018, height * .018, width * .964, height * .964);
+      context.fillStyle = '#b55336aa'; context.font = `${Math.max(10, width * .028)}px serif`; context.fillText('◆', width * .9, height * .94);
+    } else if (theme === 'winter') {
+      context.strokeStyle = '#6ca9b833'; context.lineWidth = Math.max(1, width * .0008);
+      for (let x = width * .08; x < width; x += width * .08) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
+      for (let y = height * .08; y < height; y += height * .08) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
+      context.fillStyle = '#28748faa'; context.font = `${Math.max(8, width * .015)}px serif`; context.fillText('*  ·  *  ·  *', width * .78, height * .055);
+    }
+    context.restore();
     function drawBox(box, color = box.color) {
       context.fillStyle = color; context.fillRect(box.x, box.y, box.width, box.height);
       if (box.border) { context.fillStyle = box.borderColor; context.fillRect(box.x, box.y, box.width, box.border); }
