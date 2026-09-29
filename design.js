@@ -36,6 +36,15 @@
       container.append(star);
     }
   }
+  function scaleRatingBadges(poster) {
+    const width = poster.getBoundingClientRect().width;
+    if (width) poster.style.setProperty('--rating-unit', `${width * 0.0135}px`);
+  }
+  const ratingResizeObserver = new ResizeObserver(() => {
+    const poster = $('poster-mount').firstElementChild;
+    if (poster) scaleRatingBadges(poster);
+  });
+  ratingResizeObserver.observe($('poster-mount'));
   function ratingNode(item, albumMode, compact = false) {
     const value = rating(item, albumMode);
     if (!state.ratingEnabled || value == null || value === '') return null;
@@ -159,7 +168,7 @@
     });
     const footer = text('div', 'poster-footer', '');
     footer.append(editable('span', '', 'SELECTED WITH LOVE', 'footer', '页脚'), editable('span', '', `${String(page + 1).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`, `page:${page}`, '当前页码文案'));
-    poster.append(head, grid, footer); $('poster-mount').replaceChildren(poster);
+    poster.append(head, grid, footer); $('poster-mount').replaceChildren(poster); scaleRatingBadges(poster);
     $('page-info').textContent = items.length ? `第 ${page + 1} / ${pages} 页 · 每页最多 ${count} ${albumMode ? '张' : '首'}` : '暂无可展示的作品';
     $('page-prev').disabled = page === 0; $('page-next').disabled = page === pages - 1;
     renderList(items, albumMode);
