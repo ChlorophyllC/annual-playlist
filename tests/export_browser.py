@@ -35,6 +35,7 @@ with sync_playwright() as p:
         page.route('**/api/cover?*', lambda route: route.fulfill(content_type='image/png', body=COVER))
         page.route('https://*.music.126.net/**', lambda route: route.fulfill(content_type='image/png', body=COVER))
         page.goto('http://127.0.0.1:8000'); page.wait_for_selector('.poster-item')
+        page.evaluate("document.querySelectorAll('.control-card').forEach(el => el.open = true)")
         for theme, ratio, chart, fmt, dimensions in [
             ('gallery', 'portrait', 'songs', 'png', [1200, 1600]),
             ('editorial', 'wide', 'songs', 'jpeg', [1600, 900]),

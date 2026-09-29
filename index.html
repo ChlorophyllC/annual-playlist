@@ -11,21 +11,26 @@
     <header><p class="eyebrow">ANNUAL PLAYLIST / DESIGN STUDIO</p><h1>这一年的音乐，<em>你的封面故事。</em></h1><p class="intro">选一种表达，让喜欢的音乐留在画面里。</p></header>
     <section class="studio" aria-label="海报设计">
       <aside class="design-controls">
+        <details class="control-card"><summary>榜单与文字</summary><div class="control-body">
         <label for="chart-type">榜单类型</label><select id="chart-type"><option value="songs">歌曲榜</option><option value="albums">专辑榜</option></select>
         <p id="album-summary" class="hint" aria-live="polite" hidden></p>
+        <label for="poster-title">榜单标题</label><input id="poster-title" maxlength="60" value="SOTY 2026">
+        <label for="poster-signature">署名</label><input id="poster-signature" maxlength="40" placeholder="你的名字" value="MY YEAR IN MUSIC">
+        </div></details>
+        <details class="control-card"><summary>主题与颜色</summary><div class="control-body">
         <p class="eyebrow">01 / THEME</p><h2>选择你的风格</h2>
         <div id="theme-options"></div>
         <div id="editorial-colors" hidden><label for="editorial-palette">杂志撞色</label><select id="editorial-palette"><option value="acid">黄绿 / 桃红</option><option value="coral">珊瑚红 / 天蓝</option><option value="violet">紫罗兰 / 柠檬黄</option><option value="mint">薄荷绿 / 莓红</option><option value="custom">自定义</option></select><div class="color-pickers"><label>底色<input id="editorial-bg" type="color" value="#ddf23b"></label><label>强调色<input id="editorial-accent" type="color" value="#da2578"></label></div><button id="pick-color" class="ghost" type="button" hidden>从屏幕取强调色</button></div>
-        <label for="poster-title">榜单标题</label><input id="poster-title" maxlength="60" value="SOTY 2026">
-        <label for="poster-signature">署名</label><input id="poster-signature" maxlength="40" placeholder="你的名字" value="MY YEAR IN MUSIC">
+        </div></details>
+        <details class="control-card"><summary>画布与排版</summary><div class="control-body">
         <label for="poster-ratio">画布比例</label><select id="poster-ratio"><option value="portrait">3:4 · 竖版海报</option><option value="square">1:1 · 方形封面</option><option value="wide">16:9 · 横版画面</option></select>
         <label for="poster-cover-mode">封面显示</label><select id="poster-cover-mode"><option value="square">1:1 方形 · 完整显示</option><option value="fill">填满格子 · 居中裁切</option></select>
         <label class="check-label"><input id="poster-labels" type="checkbox" checked> 显示作品名与音乐人</label>
         <p class="hint">封面显示方式不改变画布比例。排名按歌单原顺序，完整榜单自动分页。</p>
         <p class="hint">点击海报中的文字即可修改，按 Enter 完成，Esc 撤销本次编辑。修改排名文字不会移动歌曲。</p>
         <button id="reset-poster-text" class="ghost" type="button">恢复当前榜单默认文字</button>
-        <hr class="export-divider">
-        <p class="eyebrow">02 / EXPORT</p>
+        </div></details>
+        <details class="control-card"><summary>导出图片</summary><div class="control-body">
         <label for="export-format">图片格式</label><select id="export-format"><option value="png">PNG · 无损图片</option><option value="jpeg">JPG · 较小文件</option></select>
         <label for="export-quality">分辨率</label><select id="export-quality"><option value="1600">普通 · 长边 1600 px</option><option value="3200">高清 · 长边 3200 px</option></select>
         <label for="export-scope">导出范围</label><select id="export-scope"><option value="current">当前页</option><option value="all">全部分页 · ZIP 下载</option></select>
@@ -33,15 +38,16 @@
         <button id="export-button" class="export-button" type="button">导出图片 ↓</button>
         <p id="export-status" class="hint" role="status" aria-live="polite"></p>
         <div id="export-downloads"></div>
-        <hr class="export-divider">
-        <p class="eyebrow">04 / PROJECT</p>
+        </div></details>
+        <details class="control-card"><summary>工程与备份</summary><div class="control-body">
         <button id="project-export" class="export-button" type="button">下载工程文件 ↓</button>
         <label class="project-import-label" for="project-import">导入工程文件</label><input id="project-import" type="file" accept="application/json,.json">
         <p id="project-status" class="hint" role="status"></p>
-        <hr class="export-divider">
-        <p class="eyebrow">03 / TEXT</p>
+        </div></details>
+        <details class="control-card"><summary>导出纯文本</summary><div class="control-body">
         <button id="text-export-button" class="export-button" type="button">保存纯文字版 ↓</button>
         <p id="text-export-status" class="hint" role="status"></p>
+        </div></details>
       </aside>
       <div class="preview-area"><div class="preview-toolbar"><span id="preview-source">正在准备样稿…</span><span>静态预览</span></div><div class="sort-toolbar"><button id="sort-toggle" type="button" aria-pressed="false">开始排序</button><span id="sort-info" aria-live="polite"></span></div><div id="poster-mount"></div><div class="page-controls"><button id="page-prev" class="ghost" aria-label="上一页">←</button><span id="page-info" aria-live="polite"></span><button id="page-next" class="ghost" aria-label="下一页">→</button></div></div>
     </section>
@@ -57,7 +63,7 @@
     <section class="import-card">
       <label for="playlist-url">网易云歌单链接</label>
       <div class="form-row"><input id="playlist-url" value="https://music.163.com/playlist?id=18081287035" placeholder="粘贴歌单链接或输入歌单 ID" /><button id="import">导入歌单 <span>→</span></button></div>
-      <p class="hint">公开歌单可直接读取；私密、下架或无权限歌曲会单独标记。</p>
+      <p class="hint">支持网易云分享文字、短链接和歌单 ID；每次重新读取前 100 首，并重置该歌单的文字修改和排序。</p>
     </section>
     <section id="status" class="status" hidden></section>
     <section id="result" hidden><div class="result-head"><div><p class="eyebrow">IMPORT RESULT</p><h2 id="playlist-name"></h2><p id="summary" class="muted"></p></div><button id="list-sort-toggle" class="ghost" type="button" aria-pressed="false">开始排序</button><button id="clear" class="ghost">清除本地记录</button></div><div id="songs" class="songs"></div></section>

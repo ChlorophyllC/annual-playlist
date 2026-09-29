@@ -50,20 +50,43 @@ def get_json(url, body=None):
     return json.loads(response.stdout)
 
 def playlist_id(value):
-    match = re.search(r"(?:[?&]id=|playlist[/:])([0-9]+)", value.strip())
-    if not match and value.strip().isdigit():
-        return value.strip()
+    if not isinstance(value, str) or len(value) > 2048:
+        raise ValueError("歌单链接过长或格式错误")
+    value = value.strip()
+    if re.fullmatch(r"[0-9]{1,20}", value):
+        return value
+    match = re.search(r'https?://[^\s<>"\]）)]+', value)
     if not match:
-        raise ValueError("无法从链接中找到歌单 ID")
-    return match.group(1)
+        raise ValueError("请输入网易云歌单链接或 ID")
+    url = match.group(0)
+    for _ in range(5):
+        parsed = urllib.parse.urlsplit(url)
+        if (parsed.hostname not in ("163cn.tv", "music.163.com", "y.music.163.com")
+                or parsed.username or parsed.password or parsed.port
+                or parsed.scheme not in ("http", "https")):
+            raise ValueError("不支持的分享地址")
+        url = urllib.parse.urlunsplit(("https", parsed.netloc, parsed.path, parsed.query, parsed.fragment))
+        match = re.search(r"(?:[?&]id=|playlist[/:])([0-9]{1,20})(?![0-9])", url)
+        if parsed.hostname != "163cn.tv" and "playlist" in url and match:
+            return match.group(1)
+        # curl does not follow redirects: validate every destination before requesting it.
+        response = subprocess.run(["curl", "--silent", "--show-error", "--max-time", "8",
+                                   "--output", os.devnull, "--write-out", "%{redirect_url}", url],
+                                  capture_output=True, timeout=10)
+        if response.returncode or not response.stdout:
+            break
+        url = response.stdout.decode().strip()
+    raise ValueError("无法解析分享链接，请在浏览器打开后复制完整歌单地址")
 
 def fetch_playlist(value):
     pid = playlist_id(value)
-    detail = get_json(f"https://music.163.com/api/v6/playlist/detail?id={pid}&n=100000")
+    detail = get_json(f"https://music.163.com/api/v6/playlist/detail?id={pid}&n=100")
     if detail.get("code") != 200 or not detail.get("playlist"):
         raise ValueError(detail.get("message") or "网易云没有返回歌单")
     playlist = detail["playlist"]
     ids = [item.get("id") for item in playlist.get("trackIds", []) if item.get("id")]
+    source_count = len(ids)
+    ids = ids[:100]
     songs = []
     for start in range(0, len(ids), 300):
         payload = json.dumps([{"id": song_id} for song_id in ids[start:start + 300]], separators=(",", ":")).encode()
@@ -88,7 +111,7 @@ def fetch_playlist(value):
             "duration": song.get("dt") or song.get("duration") or 0,
             "url": f"https://music.163.com/#/song?id={song.get('id')}"
         })
-    return {"playlist": {"id": pid, "name": playlist.get("name", "未命名歌单"), "count": playlist.get("trackCount", len(ids))}, "items": items, "sourceCount": len(ids)}
+    return {"playlist": {"id": pid, "name": playlist.get("name", "未命名歌单"), "count": playlist.get("trackCount", len(ids))}, "items": items, "sourceCount": source_count, "truncated": source_count > 100}
 
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -139,6 +162,8 @@ class Handler(SimpleHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= 4096:
+                raise ValueError("请求大小须在 1–4096 字节之间")
             body = json.loads(self.rfile.read(length) or b"{}")
             result = fetch_playlist(body.get("url", ""))
             raw = json.dumps(result, ensure_ascii=False).encode()
@@ -147,6 +172,7 @@ class Handler(SimpleHTTPRequestHandler):
             raw = json.dumps({"error": str(error)}, ensure_ascii=False).encode()
             self.send_response(400)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)

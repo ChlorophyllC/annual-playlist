@@ -24,7 +24,20 @@ window.ChartAssets = (() => {
       r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
     });
   }
-  async function clear() { return store(null); }
+  async function clear() {
+    const databaseRef = await database();
+    await new Promise((resolve, reject) => {
+      const tx = databaseRef.transaction('projects', 'readwrite');
+      tx.objectStore('projects').clear(); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    for (const key of Object.keys(localStorage)) {
+      // Connection settings are configuration, not cached user content.
+      if (key.startsWith('annual-playlist:') && key !== 'annual-playlist:backend') localStorage.removeItem(key);
+    }
+    if ('caches' in window) for (const key of await caches.keys()) {
+      if (key.startsWith('annual-playlist')) await caches.delete(key);
+    }
+  }
   function api(path) {
     const configured = localStorage.getItem('annual-playlist:backend') || (location.hostname === 'chlorophyllc.github.io' ? 'https://annual-playlist-netease.cookie4830.workers.dev' : '');
     return configured ? configured.replace(/\/$/, '') + '/' + path.replace(/^\//, '') : new URL(path.replace(/^\//, ''), location.href).href;

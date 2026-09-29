@@ -13,10 +13,11 @@ window.updateImportedData = async (data, replace = false) => {
 async function importPlaylist() {
   importButton.disabled = true; showStatus('正在读取歌单，并匹配歌曲详情…');
   try {
-    const response = await fetch(ChartAssets.api('api/import'), {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value})});
+    const response = await fetch(ChartAssets.api('api/import'), {cache:'no-store',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value})});
     const data = await response.json(); if (!response.ok) throw new Error(data.error || '导入失败');
+    window.dispatchEvent(new CustomEvent('playlist-refresh', {detail: data.playlist.id}));
     await window.updateImportedData(data, true);
-    showStatus(`已读取 ${data.sourceCount} 首，匹配 ${data.items.filter(x=>x.matched).length} 首，已保存到此设备。`);
+    showStatus(`已读取 ${data.sourceCount} 首，匹配 ${data.items.filter(x=>x.matched).length} 首，已保存到此设备。${data.truncated ? '歌单超过 100 首，仅导入前 100 首。' : ''}`);
   } catch (error) { showStatus(error.message, true); } finally { importButton.disabled = !ChartAssets.localServer(); }
 }
 importButton.addEventListener('click',importPlaylist);
@@ -27,7 +28,7 @@ if (!ChartAssets.localServer()) {
 }
 document.querySelector('#clear').addEventListener('click',async()=>{
   await ChartAssets.clear(); localStorage.removeItem(savedKey);
-  window.dispatchEvent(new Event('playlist-cleared')); showStatus('已清除当前设备草稿，现展示示例歌单。');
+  location.reload();
 });
 window.draftReady = (async()=>{
   try {

@@ -1,3 +1,8 @@
 name = "annual-playlist-netease"
 main = "netease-importer.js"
 compatibility_date = "2026-09-29"
+
+[[ratelimits]]
+name = "IMPORT_LIMITER"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }

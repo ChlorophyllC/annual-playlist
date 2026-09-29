@@ -240,6 +240,10 @@
     $('poster-title').value = state.title; $('poster-signature').value = state.signature;
     save(); render();
   });
+  window.addEventListener('playlist-refresh', event => {
+    for (const id of [String(event.detail), `${event.detail}:albums`]) { delete state.orders[id]; delete state.textEdits[id]; }
+    save();
+  });
   window.addEventListener('playlist-loaded', event => { data = event.detail; if (data.preferredType) { state.chartType = data.preferredType; $('chart-type').value = state.chartType; } imported = true; page = 0; selected.clear(); if (state.playlistId !== data.playlist.id) { state.title = data.playlist.name; state.playlistId = data.playlist.id; $('poster-title').value = state.title; save(); } render(); });
   window.addEventListener('playlist-updated', event => { if (data?.playlist.id === event.detail.playlist.id) { data = event.detail; render(); } });
   window.addEventListener('playlist-cleared', () => { imported = false; data = sample; page = 0; selected.clear(); render(); });
