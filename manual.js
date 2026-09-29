@@ -11,7 +11,8 @@
   }
   $('new-chart').addEventListener('click',async()=>{
     const existing=window.getProjectState();
-    if(existing.playlist?.items.length&&!confirm('新建会替换当前草稿。已下载工程文件备份，继续新建？'))return;
+    if(existing.playlist?.items.length&&!window.skipNewChartConfirm&&!confirm('新建会替换当前草稿。已下载工程文件备份，继续新建？'))return;
+    window.skipNewChartConfirm = false;
     const title=$('new-title').value.trim()||'我的音乐榜单';
     await window.loadProjectState({playlist:{playlist:{id:'manual:'+crypto.randomUUID(),name:title,count:0},items:[],sourceCount:0},design:{...existing.design,chartType:$('new-type').value,title}});
     status.textContent='空白榜单已创建，搜索或自行填写作品即可开始。';
@@ -46,6 +47,10 @@
       });
     }catch(error){status.textContent=error.message;}finally{searchButton.disabled=false;}
   });
+  document.querySelectorAll('.provider-switch [data-provider]').forEach(button=>button.addEventListener('click',()=>{
+    $('search-provider').value=button.dataset.provider;
+    document.querySelectorAll('.provider-switch [data-provider]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+  }));
   $('manual-form').addEventListener('submit',async event=>{
     event.preventDefault();const name=$('manual-name').value.trim();if(!name)return;
     const type=$('chart-type').value,artist=$('manual-artist').value.trim(),album=$('manual-album').value.trim();
