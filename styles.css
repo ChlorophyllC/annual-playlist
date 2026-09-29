@@ -52,7 +52,7 @@
 .poster--summer .poster-rank{background:#155c91;color:#f8e7bd;border-radius:50%;padding:.5cqw;min-width:3cqw}
 .poster--summer .poster-footer{border-top:3px solid var(--ink);font-weight:800}
 .poster--summer::before{content:'';position:absolute;right:-10cqw;top:-10cqw;width:34cqw;height:34cqw;border-radius:50%;background:#f3a43b;box-shadow:0 0 0 1cqw #f8e7bd,0 0 0 2cqw #e56e3566;pointer-events:none}
-.poster--summer::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.12;background:repeating-linear-gradient(125deg,transparent 0 2cqw,#e56e35 2cqw 2.25cqw)}
+.poster--summer::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.12;background:repeating-linear-gradient(125deg,transparent 0 2cqw,#e56e35 2cqw 2.25cqw)}
 .poster--autumn{--paper:#f2e4ce;--ink:#4c3027;--accent:#b55336}
 .poster--autumn .poster-title{font-family:Georgia,'Songti SC',serif;font-weight:600;color:#8d402e}
 .poster--autumn .poster-kicker{border-top:1px solid #b55336;letter-spacing:.15em}
@@ -71,6 +71,15 @@
 .poster--winter::after{content:'✦  ·  ✦  ·  ✦';position:absolute;right:3cqw;top:3cqw;color:#28748f;font-size:1.5cqw;letter-spacing:.35em;opacity:.7;pointer-events:none}
 .poster--summer .poster-subtitle,.poster--autumn .poster-subtitle{font-weight:700}
 .poster--spring .poster-text-only .poster-item,.poster--winter .poster-text-only .poster-item{border-color:#6ca9b844}
+.poster .custom-poster-element{position:absolute;z-index:2;pointer-events:none;object-fit:contain;max-height:35%;filter:drop-shadow(0 5px 8px #24201418)}
+.poster.font-serif .poster-title,.poster.font-serif .poster-song,.poster.font-serif .poster-artist,.poster.font-serif .poster-kicker,.poster.font-serif .poster-footer{font-family:Georgia,'Songti SC',serif}
+.poster.font-sans .poster-title,.poster.font-sans .poster-song,.poster.font-sans .poster-artist,.poster.font-sans .poster-kicker,.poster.font-sans .poster-footer{font-family:Arial,'Helvetica Neue',sans-serif}
+.poster.font-mono .poster-title,.poster.font-mono .poster-song,.poster.font-mono .poster-artist,.poster.font-mono .poster-kicker,.poster.font-mono .poster-footer{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.poster--spring::after{content:'✿  ·  ✿  ·  ✿  ·  ✿';font-size:2cqw;letter-spacing:.9cqw;top:8cqw;bottom:auto;left:8cqw;right:4cqw;white-space:nowrap;opacity:.38}
+.poster--autumn::after{content:'🍁  ·  🍂  ·  🍁';font-size:2.4cqw;right:3.5cqw;bottom:3cqw;letter-spacing:.7cqw}
+.poster--winter::after{content:'✦  ·  ❄  ·  ✦';font-size:1.8cqw;letter-spacing:.6cqw}
+.poster--spring .poster-grid,.poster--spring .poster-head,.poster--spring .poster-footer,.poster--summer .poster-grid,.poster--summer .poster-head,.poster--summer .poster-footer,.poster--autumn .poster-grid,.poster--autumn .poster-head,.poster--autumn .poster-footer,.poster--winter .poster-grid,.poster--winter .poster-head,.poster--winter .poster-footer{position:relative;z-index:1}
+.custom-design{margin-top:18px;padding-top:14px;border-top:1px solid #eee9e1}.custom-design>label,.custom-upload-label{display:block;font-size:12px;font-weight:700;margin:12px 0 6px}.custom-design select,.custom-design input[type=color]{width:100%;padding:9px;border:1px solid #d9d3c8;border-radius:8px;background:#fcfbf8}.custom-design input[type=color]{height:36px;padding:2px}.custom-design input[type=file]{width:100%;font-size:12px}.custom-elements{display:grid;gap:6px;margin-top:10px}.custom-element-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#716e68}.custom-element-row button{padding:4px 8px;font-size:11px;background:#fff1ed;color:#983b27;border:1px solid #e7b8a9}
 
 /* Collapsible controls remain compact on touch screens. */
 .design-controls{background:none;border:0;padding:0;display:grid;gap:10px}

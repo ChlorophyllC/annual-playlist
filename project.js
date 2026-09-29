@@ -51,6 +51,7 @@
     const clean=structuredClone(payload);
     for(const [index,item] of clean.playlist.items.entries()) { if(!item||typeof item!=='object'||!['string','number'].includes(typeof item.id))throw new Error('作品记录不完整');item.position??=index;if(item.album?.cover&&!/^(https?:\/\/|data:image\/(png|jpeg|webp);base64,|assets\/)/i.test(item.album.cover))throw new Error('不支持的封面格式'); }
     const d=clean.design||{};if(!['gallery','editorial','spring','summer','autumn','winter'].includes(d.theme)||!['songs','albums'].includes(d.chartType)||!['portrait','square','wide'].includes(d.ratio))throw new Error('工程主题或比例无效');
+    d.themeOptions=d.themeOptions&&typeof d.themeOptions==='object'?d.themeOptions:{};d.customElements=Array.isArray(d.customElements)?d.customElements.slice(0,30):[];
     d.coverMode=['square','fill'].includes(d.coverMode)?d.coverMode:'square';d.art=d.art==='text'?'text':'covers';d.editorialBg=/^#[0-9a-f]{6}$/i.test(d.editorialBg)?d.editorialBg:'#ddf23b';d.editorialAccent=/^#[0-9a-f]{6}$/i.test(d.editorialAccent)?d.editorialAccent:'#da2578';d.textEdits=d.textEdits&&typeof d.textEdits==='object'?d.textEdits:{};d.orders=d.orders&&typeof d.orders==='object'?d.orders:{};for(const order of Object.values(d.orders))if(!Array.isArray(order))throw new Error('排序记录无效');
     return clean;
   }

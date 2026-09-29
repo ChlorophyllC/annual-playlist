@@ -112,6 +112,7 @@
   }
   function render() {
     if (!data) return;
+    const selectedTheme = state.theme === 'seasonal' ? (state.season || 'spring') : state.theme;
     const albumMode = state.chartType === 'albums';
     const chart = chartData();
     const items = applyChartOrder(chart.items, state.orders[editKey()] || [], state.chartType);
@@ -126,14 +127,19 @@
     $('album-summary').textContent = `从 ${data.items.length} 首歌曲提取 ${items.length} 张专辑，按首次出现排序。${chart.unresolved.length ? `${chart.unresolved.length} 首缺少专辑信息，未纳入专辑榜；可在下方导入列表查看。` : ''}${items.some(item => item.artistSource === 'tracks') ? '部分音乐人来自已导入歌曲，可能不是完整专辑署名，可点击修改。' : ''}`;
     $('poster-title').value = edits().title ?? defaultTitle();
     $('poster-signature').value = edits().signature ?? 'MY YEAR IN MUSIC';
-    const theme = themes.find(t => t.id === state.theme);
+    const theme = themes.find(t => t.id === selectedTheme) || themes[0];
     const format = state.art === 'text' ? {columns: state.ratio === 'wide' ? 3 : 2, rows: 12} : formats[state.ratio], count = format.columns * format.rows;
     const pages = Math.max(1, Math.ceil(items.length / count));
     page = Math.max(0, Math.min(page, pages - 1));
     document.querySelectorAll('.theme-choice').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.theme === state.theme)));
     const poster = text('article', `poster poster--${theme.id} ratio--${state.ratio} covers--${state.coverMode}${state.labels || state.art === 'text' ? '' : ' hide-labels'}${state.art === 'text' ? ' poster-text-only' : ''}`, '');
+    const custom = state.themeOptions?.[theme.id] || {};
+    if (custom.font) poster.classList.add(`font-${custom.font}`);
+    if (custom.ink) poster.style.setProperty('--ink', custom.ink);
+    if (custom.accent) poster.style.setProperty('--accent', custom.accent);
     if (state.theme === 'editorial') { poster.style.setProperty('--paper', state.editorialBg); poster.style.setProperty('--accent', state.editorialAccent); }
-    $('editorial-colors').hidden = state.theme !== 'editorial';
+    $('editorial-colors').hidden = selectedTheme !== 'editorial';
+    renderCustomControls();
     poster.style.setProperty('--columns', format.columns);
     poster.style.setProperty('--rows', format.rows);
     const head = text('div', 'poster-head', '');
@@ -169,6 +175,10 @@
     const footer = text('div', 'poster-footer', '');
     footer.append(editable('span', '', 'SELECTED WITH LOVE', 'footer', '页脚'), editable('span', '', `${String(page + 1).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`, `page:${page}`, '当前页码文案'));
     poster.append(head, grid, footer); $('poster-mount').replaceChildren(poster); scaleRatingBadges(poster);
+    (state.customElements || []).forEach(element => {
+      if (element.kind !== 'image' || !element.data) return;
+      const image = new Image(); image.className = 'custom-poster-element'; image.src = element.data; image.alt = element.name || '自定义装饰'; image.style.left = `${element.x || 72}%`; image.style.top = `${element.y || 8}%`; image.style.width = `${element.width || 18}%`; poster.append(image);
+    });
     $('page-info').textContent = items.length ? `第 ${page + 1} / ${pages} 页 · 每页最多 ${count} ${albumMode ? '张' : '首'}` : '暂无可展示的作品';
     $('page-prev').disabled = page === 0; $('page-next').disabled = page === pages - 1;
     renderList(items, albumMode);
@@ -308,9 +318,16 @@
     const button = text('button', `theme-choice theme-choice--${theme.id}`, '');
     button.type = 'button'; button.dataset.theme = theme.id;
     button.append(text('span', 'theme-swatch', theme.badge), text('strong', '', theme.name), text('small', '', theme.caption));
-    button.addEventListener('click', () => { state.theme = theme.id; save(); render(); });
+    button.addEventListener('click', () => { state.theme = theme.group === 'seasonal' ? 'seasonal' : theme.id; if (theme.group === 'seasonal') state.season = theme.id; save(); render(); });
     $('theme-options').append(button);
   });
+  function activeTheme() { return state.theme === 'seasonal' ? (state.season || 'spring') : state.theme; }
+  const seasonOptions = $('season-options');
+  $('season-style').addEventListener('input', () => { state.season = $('season-style').value; state.theme = 'seasonal'; save(); render(); });
+  $('custom-font').addEventListener('input', () => { const id = activeTheme(); state.themeOptions ||= {}; state.themeOptions[id] ||= {}; state.themeOptions[id].font = $('custom-font').value; save(); render(); });
+  ['custom-ink', 'custom-accent'].forEach(id => $(id).addEventListener('input', () => { const key = id === 'custom-ink' ? 'ink' : 'accent', themeId = activeTheme(); state.themeOptions ||= {}; state.themeOptions[themeId] ||= {}; state.themeOptions[themeId][key] = $(id).value; save(); render(); }));
+  $('custom-image').addEventListener('change', async () => { const file = $('custom-image').files?.[0]; if (!file) return; try { const data = await ChartAssets.normalize(file); state.customElements ||= []; state.customElements.push({kind:'image', name:file.name, data, x:72, y:8, width:18}); save(); render(); } catch (error) { showStatus(error.message, true); } finally { $('custom-image').value = ''; } });
+  function renderCustomControls() { const id = activeTheme(), options = state.themeOptions?.[id] || {}; $('season-options').hidden = state.theme !== 'seasonal'; $('season-style').value = id; $('custom-font').value = options.font || ''; $('custom-ink').value = options.ink || '#302d26'; $('custom-accent').value = options.accent || '#b34f36'; const list = $('custom-elements'); list.replaceChildren(...(state.customElements || []).map((item, index) => { const row = text('div','custom-element-row',`${item.kind === 'image' ? '图片' : '文字'} · ${item.name || '未命名'}`); const remove = text('button','','删除'); remove.type='button'; remove.addEventListener('click',()=>{state.customElements.splice(index,1);save();render();}); row.append(remove); return row; })); }
   [['chart-type', 'chartType'], ['poster-title', 'title'], ['poster-signature', 'signature'], ['poster-ratio', 'ratio'], ['poster-cover-mode', 'coverMode'], ['poster-labels', 'labels'], ['export-art', 'art'], ['editorial-palette', 'editorialPalette'], ['editorial-bg', 'editorialBg'], ['editorial-accent', 'editorialAccent']].forEach(([id, property]) => {
     const control = $(id), checkbox = control.type === 'checkbox';
     control[checkbox ? 'checked' : 'value'] = state[property];
@@ -358,6 +375,7 @@
     for (const [id, property] of [['chart-type','chartType'],['poster-title','title'],['poster-signature','signature'],['poster-ratio','ratio'],['poster-cover-mode','coverMode'],['poster-labels','labels'],['export-art','art'],['editorial-palette','editorialPalette'],['editorial-bg','editorialBg'],['editorial-accent','editorialAccent']]) {
       const control = $(id); control[control.type === 'checkbox' ? 'checked' : 'value'] = state[property];
     }
+    renderCustomControls();
     $('rating-enabled').checked = Boolean(state.ratingEnabled); $('rating-settings').hidden = !state.ratingEnabled;
     $('rating-mode').value = state.ratingMode === 'levels' ? 'levels' : 'stars'; $('rating-levels').value = state.ratingLevels || '💣, C, B, A, A+';
     save(); await window.updateImportedData(project.playlist, true);

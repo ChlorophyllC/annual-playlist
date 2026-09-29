@@ -31,8 +31,9 @@
         </div></details>
         <details class="control-card"><summary>主题与颜色</summary><div class="control-body">
         <p class="eyebrow">01 / THEME</p><h2>选择你的风格</h2>
-        <div id="theme-options"></div>
+        <div id="theme-options"></div><div id="season-options" hidden><label for="season-style">季节变体</label><select id="season-style"><option value="spring">春日新芽</option><option value="summer">盛夏唱片</option><option value="autumn">秋日唱片</option><option value="winter">冬夜蓝调</option></select></div>
         <div id="editorial-colors" hidden><label for="editorial-palette">杂志撞色</label><select id="editorial-palette"><option value="acid">黄绿 / 桃红</option><option value="coral">珊瑚红 / 天蓝</option><option value="violet">紫罗兰 / 柠檬黄</option><option value="mint">薄荷绿 / 莓红</option><option value="custom">自定义</option></select><div class="color-pickers"><label>底色<input id="editorial-bg" type="color" value="#ddf23b"></label><label>强调色<input id="editorial-accent" type="color" value="#da2578"></label></div><button id="pick-color" class="ghost" type="button" hidden>从屏幕取强调色</button></div>
+        <div id="custom-design" class="custom-design"><label for="custom-font">自定义字体</label><select id="custom-font"><option value="">主题默认</option><option value="serif">衬线 · Georgia</option><option value="sans">无衬线 · Arial</option><option value="mono">等宽 · ui-monospace</option></select><label>文字颜色<input id="custom-ink" type="color" value="#302d26"></label><label>强调颜色<input id="custom-accent" type="color" value="#b34f36"></label><label class="custom-upload-label" for="custom-image">添加装饰图片</label><input id="custom-image" type="file" accept="image/png,image/jpeg,image/webp"><div id="custom-elements" class="custom-elements"></div></div>
         </div></details>
         <details class="control-card"><summary>画布与排版</summary><div class="control-body">
         <label for="poster-ratio">画布比例</label><select id="poster-ratio"><option value="portrait">3:4 · 竖版海报</option><option value="square">1:1 · 方形封面</option><option value="wide">16:9 · 横版画面</option></select>
