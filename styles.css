@@ -41,3 +41,5 @@
 .control-body>input{width:100%;font:inherit;font-size:14px}.control-body .eyebrow,.control-body h2{display:none}
 .cover-tools button{color:#fff}.control-body input[type=file]{max-width:100%}
 @media(max-width:850px){.design-controls{display:grid}.control-body>input,.control-body select{font-size:16px}}
+
+.delete-action{margin-left:auto;align-self:center;background:#fff1ed!important;border-color:#e7b8a9;color:#983b27!important;padding:5px 8px!important;font-size:11px!important;white-space:nowrap}.delete-action:focus-visible{outline-color:#983b27}

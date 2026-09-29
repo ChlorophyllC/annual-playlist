@@ -180,7 +180,16 @@
         finally { applyUrl.disabled = false; }
       });
       coverTools.append(file, upload, urlInput, applyUrl);
-      card.append(image, info, coverTools); decorateSortCard(card, item, index + 1); return card;
+      const remove = text('button', 'cover-action delete-action', '删除');
+      remove.type = 'button'; remove.setAttribute('aria-label', `删除${albumMode ? '专辑' : '歌曲'}：${item.name || item.id}`);
+      remove.addEventListener('click', async () => {
+        remove.disabled = true;
+        try {
+          await window.deleteChartItem(item, albumMode);
+          showStatus(`已删除${albumMode ? '专辑' : '歌曲'}「${item.name || item.id}」`);
+        } catch (error) { remove.disabled = false; showStatus(error.message || '删除失败', true); }
+      });
+      card.append(image, info, remove, coverTools); decorateSortCard(card, item, index + 1); return card;
     });
     $('songs').replaceChildren(...cards);
     // Preserve access to tracks that cannot be assigned to an album.
@@ -258,6 +267,35 @@
   };
   window.addChartItem = async entry => {
     data.items.push({...entry, position: data.items.length}); data.sourceCount = data.items.length; data.playlist.count = data.items.length;
+    await window.updateImportedData(data);
+  };
+  window.deleteChartItem = async (item, albumMode = false) => {
+    if (!data?.items) return;
+    const removedKeys = new Set();
+    if (albumMode) {
+      const albumId = String(item.album?.id ?? item.id);
+      data.items = data.items.filter(track => {
+        const keep = String(track.album?.id ?? '') !== albumId;
+        if (!keep) removedKeys.add(chartItemKey(track, 'songs'));
+        return keep;
+      });
+      removedKeys.add(chartItemKey(item, 'albums'));
+    } else {
+      const index = data.items.findIndex(track => String(track.id) === String(item.id) && Number(track.position) === Number(item.position));
+      if (index < 0) return;
+      data.items.splice(index, 1);
+      removedKeys.add(chartItemKey(item, 'songs'));
+    }
+    data.sourceCount = data.items.length;
+    data.playlist.count = data.items.length;
+    if (data.coverOverrides) for (const key of removedKeys) {
+      delete data.coverOverrides[key];
+      delete data.coverOverrides[key.replace(/^song:/, 'album:')];
+    }
+    for (const chartType of ['songs', 'albums']) {
+      const id = `${data.playlist.id}${chartType === 'albums' ? ':albums' : ''}`;
+      state.orders[id] = (state.orders[id] || []).filter(key => !removedKeys.has(key));
+    }
     await window.updateImportedData(data);
   };
   if (window.EyeDropper) {
