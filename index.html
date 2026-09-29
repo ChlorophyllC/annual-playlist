@@ -80,9 +80,11 @@
     </section>
     <section id="status" class="status" hidden></section><div id="undo-bar" class="undo-bar" hidden><span id="undo-message"></span><button id="undo-delete" type="button">撤销</button></div>
     <section id="result" hidden><div class="result-head"><div><p class="eyebrow">IMPORT RESULT</p><h2 id="playlist-name"></h2><p id="summary" class="muted"></p></div><button id="list-sort-toggle" class="ghost" type="button" aria-pressed="false">开始排序</button><button id="clear" class="ghost">清除本地记录</button></div><div id="songs" class="songs"></div></section>
-    <footer class="site-footer">本工具用于整理个人音乐榜单，与音乐平台无关联。歌曲资料和封面归各权利人所有，数据来源以作品记录为准。<a href="LEGAL.md">使用与数据说明</a> · <a href="LICENSE">代码许可</a><span class="footer-support">觉得有帮助？欢迎在 <a href="https://github.com/ChlorophyllC/annual-playlist" target="_blank" rel="noopener noreferrer">GitHub 点个 Star</a>。</span></footer></main>
+    <footer class="site-footer">本工具用于整理个人音乐榜单，与音乐平台无关联。歌曲资料和封面归各权利人所有，数据来源以作品记录为准。<a href="LEGAL.md">使用与数据说明</a> · <a href="LICENSE">代码许可</a><span class="footer-support">觉得有帮助？欢迎在 <a href="https://github.com/ChlorophyllC/annual-playlist" target="_blank" rel="noopener noreferrer">GitHub 点个 Star</a>。</span><span class="footer-privacy">本站仅使用匿名访问统计改善功能，不收集歌单内容、搜索词或上传图片。</span></footer></main>
   <nav class="mobile-actions" aria-label="快速操作"><button id="mobile-save" type="button">保存工程</button><button id="mobile-export" type="button">导出图片</button></nav>
   <script src="assets.js"></script>
+  <script>window.ANNUAL_PLAYLIST_ANALYTICS_TOKEN = '';</script>
+  <script src="analytics.js"></script>
   <script src="themes.js"></script>
   <script src="albums.js"></script>
   <script src="sorting.js"></script>

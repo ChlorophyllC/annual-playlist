@@ -84,3 +84,7 @@ Chromium 与 WebKit 回归覆盖：两主题、三比例、PNG/JPG、四页 ZIP�
 ### 导入与移动端修复（2026-09-29）
 
 左侧六组设置默认折叠。网易云导入支持分享文字和短链接，可填写起止位置，每次最多 100 首，也可以逐页追加到当前榜单。重新导入第一段会替换草稿；继续导入下一页会追加条目。清除本地记录删除项目、内嵌封面、文字、排序和设计设置，保留后端连接配置；不清除同域其他应用或浏览器全局 HTTP 缓存。Worker 必须单独更新，具体限流绑定和安全边界见 `workers/README.md`。
+
+## 匿名访问统计
+
+页面预留了 Cloudflare Web Analytics。要启用统计，请在 Cloudflare Web Analytics 创建站点，将生成的 token 填入 `index.html` 中 `window.ANNUAL_PLAYLIST_ANALYTICS_TOKEN` 的空字符串。统计仅用于访问量、设备、来源和地区等汇总信息，不发送歌单内容、搜索词、图片或工程文件。
