@@ -31,7 +31,8 @@ async function resolveId(value) {
   throw new Error('无法解析分享链接，请在浏览器打开后复制完整歌单地址');
 }
 async function api(url, init) {
-  const response = await fetch(url, {...init, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(12000), headers: {'User-Agent': 'annual-playlist-worker/1.0', ...(init?.headers || {})}});
+  // Cloudflare Workers supports only follow/manual for redirect handling.
+  const response = await fetch(url, {...init, cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(12000), headers: {'User-Agent': 'annual-playlist-worker/1.0', ...(init?.headers || {})}});
   if (!response.ok) throw new Error(`网易云请求失败 (${response.status})`);
   return response.json();
 }
