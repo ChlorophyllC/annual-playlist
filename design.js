@@ -2,8 +2,9 @@
   const key = 'annual-playlist:design:v1';
   const themes = window.PLAYLIST_THEMES;
   const formats = {portrait: {columns: 3, rows: 4}, square: {columns: 4, rows: 3}, wide: {columns: 6, rows: 2}};
-  let state = {theme: 'gallery', chartType: 'songs', ratio: 'portrait', coverMode: 'square', title: 'SOTY 2026', signature: 'MY YEAR IN MUSIC', labels: true, editorialPalette: 'acid', editorialBg: '#ddf23b', editorialAccent: '#da2578', art: 'covers', ratingEnabled: false, ratingMode: 'stars', ratingLevels: '💣, C, B, A, A+', ratings: {}};
+  let state = {theme: 'gallery', chartType: 'songs', ratio: 'portrait', coverMode: 'square', title: 'SOTY 2026', signature: 'MY YEAR IN MUSIC', labels: true, editorialPalette: 'acid', editorialBg: '#ddf23b', editorialAccent: '#da2578', art: 'covers', ratingEnabled: false, ratingMode: 'stars', ratingLevels: '💣, C, B, A, A+', ratings: {}, filters: []};
   try { Object.assign(state, JSON.parse(localStorage.getItem(key)) || {}); } catch (_) {}
+  if (!Array.isArray(state.filters)) state.filters = [];
   if (state.theme === 'spring' || state.theme === 'summer' || state.theme === 'autumn' || state.theme === 'winter') { state.season = state.theme; state.theme = 'seasonal'; }
   if (!themes.some(t => t.id === state.theme)) state.theme = themes[0].id;
   if (!['spring', 'summer', 'autumn', 'winter'].includes(state.season)) state.season = 'spring';
@@ -188,14 +189,15 @@
     });
     const footer = text('div', 'poster-footer', '');
     footer.append(editable('span', '', 'SELECTED WITH LOVE', 'footer', '页脚'), editable('span', '', `${String(page + 1).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`, `page:${page}`, '当前页码文案'));
-    const decorationVariants = {
-      spring: ['ring', 'dots'], summer: ['sun', 'stripes'], autumn: ['border', 'leaf'],
-      winter: ['border', 'snow'], editorial: ['grain'],
-    }[theme.id] || [];
-    const decorations = text('div', 'poster-decorations', '');
-    decorations.setAttribute('aria-hidden', 'true');
-    decorations.append(...decorationVariants.map(variant => text('span', `theme-decoration theme-decoration--${theme.id}-${variant}`, '')));
-    poster.append(decorations, head, grid, footer); $('poster-mount').replaceChildren(poster); scaleRatingBadges(poster);
+    poster.append(head, grid, footer); $('poster-mount').replaceChildren(poster);
+
+    // Apply theme decorations using new theme system
+    if (window.applyTheme && window.THEMES && window.THEMES[theme.id]) {
+      const activeFilters = state.filters || [];
+      window.applyTheme(poster, theme.id, activeFilters);
+    }
+
+    scaleRatingBadges(poster);
     (state.customElements || []).forEach(element => {
       if (element.scope === 'page' && Number(element.page) !== page + 1) return;
       const node = element.kind === 'text' ? text('div', 'custom-poster-element custom-poster-text', element.text || '') : new Image();
@@ -361,6 +363,31 @@
     button.addEventListener('click', () => { state.theme = theme.id; save(); render(); });
     $('theme-options').append(button);
   });
+
+  // Initialize filter choices
+  if (window.FILTER_EFFECTS) {
+    const filterContainer = $('filter-choices');
+    Object.entries(window.FILTER_EFFECTS).forEach(([key, filter]) => {
+      const button = text('button', 'filter-choice', filter.name);
+      button.type = 'button';
+      button.dataset.filter = key;
+      button.setAttribute('aria-pressed', state.filters.includes(key) ? 'true' : 'false');
+      button.title = filter.description || '';
+      button.addEventListener('click', () => {
+        const index = state.filters.indexOf(key);
+        if (index >= 0) {
+          state.filters.splice(index, 1);
+        } else {
+          state.filters.push(key);
+        }
+        button.setAttribute('aria-pressed', state.filters.includes(key) ? 'true' : 'false');
+        save();
+        render();
+      });
+      filterContainer.append(button);
+    });
+  }
+
   $('theme-options').addEventListener('click', event => {
     const button = event.target.closest('.theme-choice');
     if (button?.dataset.theme === 'seasonal') $('season-options').hidden = false;
