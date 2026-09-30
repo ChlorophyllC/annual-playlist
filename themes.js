@@ -17,11 +17,12 @@ const THEMES = {
     foreground: '#2a2a2a',
 
     decorations: [
-      // Top border - double line for elegance
+      // Top border - double line
       {
         type: 'line',
-        position: 'top',
+        position: 'top-outer',
         style: {
+          position: 'absolute',
           height: '1px',
           background: '#2a2a2a',
           top: '2.2rem',
@@ -33,12 +34,13 @@ const THEMES = {
         type: 'line',
         position: 'top-inner',
         style: {
+          position: 'absolute',
           height: '1px',
           background: '#2a2a2a',
           top: '2.6rem',
           left: '2.4rem',
           right: '2.4rem',
-          opacity: '0.4'
+          opacity: '0.35'
         }
       },
       // Bottom border - double line
@@ -46,18 +48,20 @@ const THEMES = {
         type: 'line',
         position: 'bottom-inner',
         style: {
+          position: 'absolute',
           height: '1px',
           background: '#2a2a2a',
           bottom: '4.6rem',
           left: '2.4rem',
           right: '2.4rem',
-          opacity: '0.4'
+          opacity: '0.35'
         }
       },
       {
         type: 'line',
-        position: 'bottom',
+        position: 'bottom-outer',
         style: {
+          position: 'absolute',
           height: '1px',
           background: '#2a2a2a',
           bottom: '4.2rem',
@@ -65,68 +69,40 @@ const THEMES = {
           right: '2.4rem'
         }
       },
-      // Corner ornaments - simple geometric shapes
+      // Subtle corner marks
       {
         type: 'svg',
         position: 'corners',
         svg: `<svg width="100%" height="100%" style="position:absolute;inset:0;pointer-events:none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Top left corner -->
-          <line x1="2.4%" y1="11.5%" x2="5%" y2="11.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <line x1="2.4%" y1="11.5%" x2="2.4%" y2="14.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <!-- Top right corner -->
-          <line x1="95%" y1="11.5%" x2="97.6%" y2="11.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <line x1="97.6%" y1="11.5%" x2="97.6%" y2="14.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <!-- Bottom left corner -->
-          <line x1="2.4%" y1="85.5%" x2="2.4%" y2="88.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <line x1="2.4%" y1="88.5%" x2="5%" y2="88.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <!-- Bottom right corner -->
-          <line x1="97.6%" y1="85.5%" x2="97.6%" y2="88.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
-          <line x1="95%" y1="88.5%" x2="97.6%" y2="88.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.6"/>
+          <line x1="2.4%" y1="8.5%" x2="4.2%" y2="8.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
+          <line x1="95.8%" y1="8.5%" x2="97.6%" y2="8.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
+          <line x1="2.4%" y1="91.5%" x2="4.2%" y2="91.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
+          <line x1="95.8%" y1="91.5%" x2="97.6%" y2="91.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
         </svg>`
       },
-      // Subtle texture overlay using SVG noise
+      // Light texture overlay
       {
         type: 'pattern',
         position: 'texture',
-        svg: `<svg width="100%" height="100%" style="position:absolute;inset:0;pointer-events:none;opacity:0.03" xmlns="http://www.w3.org/2000/svg">
+        svg: `<svg width="100%" height="100%" style="position:absolute;inset:0;pointer-events:none;opacity:0.025" xmlns="http://www.w3.org/2000/svg">
           <filter id="gallery-noise">
-            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" seed="5"/>
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="15"/>
             <feColorMatrix type="saturate" values="0"/>
           </filter>
           <rect width="100%" height="100%" filter="url(#gallery-noise)"/>
         </svg>`
-      },
-      // Center ornament above title
-      {
-        type: 'svg',
-        position: 'title-ornament',
-        svg: `<svg width="120" height="20" style="position:absolute;left:50%;top:7%;transform:translateX(-50%);opacity:0.5" xmlns="http://www.w3.org/2000/svg">
-          <line x1="0" y1="10" x2="45" y2="10" stroke="#2a2a2a" stroke-width="0.8"/>
-          <circle cx="60" cy="10" r="2.5" fill="none" stroke="#2a2a2a" stroke-width="0.8"/>
-          <line x1="75" y1="10" x2="120" y2="10" stroke="#2a2a2a" stroke-width="0.8"/>
-        </svg>`
-      },
-      // Small decorative element near footer
-      {
-        type: 'svg',
-        position: 'footer-ornament',
-        svg: `<svg width="60" height="12" style="position:absolute;left:2.4rem;bottom:5.2rem;opacity:0.4" xmlns="http://www.w3.org/2000/svg">
-          <line x1="0" y1="6" x2="20" y2="6" stroke="#2a2a2a" stroke-width="0.8"/>
-          <circle cx="30" cy="6" r="1.5" fill="#2a2a2a"/>
-          <line x1="40" y1="6" x2="60" y2="6" stroke="#2a2a2a" stroke-width="0.8"/>
-        </svg>`
       }
     ],
 
-    // Optional filters that can be toggled
     availableFilters: ['vintage', 'grain', 'halftone']
   },
 
   editorial: {
     name: '出版物',
     description: '杂志编辑风格，强调排版',
-    background: 'var(--editorial-bg, #f8f3ed)',
-    foreground: 'var(--editorial-accent, #2a2a2a)',
+    // Editorial theme uses CSS variables set by design.js, don't override
+    background: null,
+    foreground: null,
 
     decorations: [],
     availableFilters: ['vintage', 'grain']
@@ -342,9 +318,13 @@ function applyTheme(posterElement, themeKey, filters = []) {
   // Remove old decorations
   posterElement.querySelectorAll('.theme-decoration').forEach(el => el.remove());
 
-  // Apply background/foreground
-  posterElement.style.backgroundColor = theme.background;
-  posterElement.style.color = theme.foreground;
+  // Apply background/foreground - support CSS variables
+  if (theme.background && !theme.background.startsWith('var(')) {
+    posterElement.style.backgroundColor = theme.background;
+  }
+  if (theme.foreground && !theme.foreground.startsWith('var(')) {
+    posterElement.style.color = theme.foreground;
+  }
 
   // Add decorations
   theme.decorations.forEach((decor, index) => {
@@ -376,8 +356,8 @@ function applyTheme(posterElement, themeKey, filters = []) {
     posterElement.appendChild(element);
   });
 
-  // Apply filters
-  applyFilters(posterElement, filters);
+  // Apply filters (temporarily disabled - will be redesigned)
+  // applyFilters(posterElement, filters);
 }
 
 function applyFilters(posterElement, filterKeys = []) {
