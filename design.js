@@ -170,6 +170,10 @@
     items.slice(page * count, (page + 1) * count).forEach((item, index) => {
       const rank = page * count + index + 1;
       const card = text('figure', 'poster-item', '');
+      if (theme.id === 'spring') {
+        card.style.setProperty('--spring-tilt', '0deg');
+        card.style.setProperty('--spring-frame', `url("materials/frame-${[3, 7, 9][(rank - 1) % 3]}.png")`);
+      }
       const slot = text('div', 'poster-cover-slot', '');
       const frame = text('div', 'poster-cover', '');
       frame.append(text('span', 'cover-placeholder', '♪'));
@@ -179,9 +183,19 @@
         image.addEventListener('error', () => { image.style.visibility = 'hidden'; }); image.src = url; frame.append(image);
       }
       const itemKey = albumMode ? `album:${item.id}` : `item:${item.id}:${item.position ?? rank}`;
-      frame.append(editable('span', 'poster-rank', String(rank).padStart(2, '0'), `${itemKey}:rank`, '排名文案'));
+      const rankNode = editable('span', 'poster-rank', String(rank).padStart(2, '0'), `${itemKey}:rank`, '排名文案');
+      if (theme.id === 'spring' && state.art !== 'text') {
+        const flower = new Image();
+        flower.className = 'spring-card-flower';
+        flower.alt = '';
+        flower.src = `materials/flower-${((rank - 1) % 15) + 1}.png`;
+        flower.draggable = false;
+        frame.append(flower);
+      }
+      if (theme.id !== 'spring' && state.art !== 'text') frame.append(rankNode);
       const badge = ratingNode(item, albumMode, state.art === 'text'); if (badge) frame.append(badge);
       const caption = text('figcaption', 'poster-caption', '');
+      if (theme.id === 'spring' || state.art === 'text') caption.append(rankNode);
       const name = item.name || `未匹配歌曲 ${item.id}`;
       caption.append(editable('div', 'poster-song', name, `${itemKey}:name`, albumMode ? '专辑名' : '歌名'), editable('div', 'poster-artist', (item.artists || []).map(a => a.name).join(' / ') || '待补全', `${itemKey}:artist`, '音乐人'));
       slot.append(frame);

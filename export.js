@@ -17,6 +17,8 @@
     if (typeof snap !== 'function') throw new Error('snapdom 未加载');
     const images = [...poster.querySelectorAll('img')];
     const original = images.map(image => ({image, src: image.getAttribute('src'), crossOrigin: image.getAttribute('crossorigin')}));
+    const originalTransform = poster.style.transform;
+    const originalTransformOrigin = poster.style.transformOrigin;
     try {
       for (const image of images) {
         const source = image.currentSrc || image.src;
@@ -25,17 +27,42 @@
       await Promise.all(images.map(image => image.decode?.().catch(() => {}) || Promise.resolve()));
       await document.fonts.ready;
       const bounds = poster.getBoundingClientRect();
-      const scale = longEdge / Math.max(bounds.width, bounds.height);
-      const result = await snap(poster, {scale, backgroundColor: getComputedStyle(poster).backgroundColor, embedFonts: true, embedImages: true});
-      const canvas = result instanceof HTMLCanvasElement ? result : await result.toCanvas?.();
+      if (!bounds.width || !bounds.height) throw new Error('海报尺寸无效');
+      // Keep the CSS layout at its preview size. Passing explicit output
+      // dimensions makes snapdom rasterize the complete SVG at the requested
+      // resolution, so cqw and fixed-pixel styles retain the same proportions.
+      const rasterScale = longEdge / Math.max(bounds.width, bounds.height);
+      const targetWidth = Math.max(1, Math.round(bounds.width * rasterScale));
+      const targetHeight = Math.max(1, Math.round(bounds.height * rasterScale));
+      // Scale the rendered element as a whole while capturing. This keeps
+      // cqw and fixed-pixel declarations in the same proportion and makes
+      // Safari's intermediate SVG raster use the final resolution.
+      poster.style.transformOrigin = 'top left';
+      poster.style.transform = `scale(${rasterScale})`;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const captureOptions = {
+        scale: 1,
+        dpr: 1,
+        backgroundColor: getComputedStyle(poster).backgroundColor,
+        embedFonts: true,
+        embedImages: true
+      };
+      const result = await snap(poster, captureOptions);
+      const canvas = result instanceof HTMLCanvasElement
+        ? result
+        : await result.toCanvas?.({width: targetWidth, height: targetHeight, dpr: 1});
       if (!(canvas instanceof HTMLCanvasElement)) throw new Error('snapdom 未返回画布');
       const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const actualLongEdge = Math.max(canvas.width, canvas.height);
+      if (actualLongEdge < longEdge * .95) throw new Error(`导出分辨率不足（${actualLongEdge}px，目标 ${longEdge}px）`);
       return await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('snapdom 图片编码失败')), mime, .94));
     } finally {
       for (const item of original) {
         if (item.src == null) item.image.removeAttribute('src'); else item.image.setAttribute('src', item.src);
         if (item.crossOrigin == null) item.image.removeAttribute('crossorigin'); else item.image.setAttribute('crossorigin', item.crossOrigin);
       }
+      poster.style.transform = originalTransform;
+      poster.style.transformOrigin = originalTransformOrigin;
     }
   }
   // ZIP STORE: the PNG/JPG payload is already compressed. One download avoids
