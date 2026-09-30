@@ -153,6 +153,18 @@
     if (state.theme === 'editorial') { poster.style.setProperty('--paper', state.editorialBg); poster.style.setProperty('--accent', state.editorialAccent); }
     if (custom.accent) poster.style.setProperty('--custom-accent', custom.accent);
     if (custom.ink) poster.style.setProperty('--ink', custom.ink);
+    // Keep seasonal artwork as regular image nodes. CSS background images are
+    // rendered in the live preview but are not embedded reliably by SnapDOM
+    // in Safari, mobile browsers, and Edge exports.
+    if (theme.id === 'spring') {
+      const background = new Image();
+      background.className = 'spring-poster-background';
+      background.alt = '';
+      background.decoding = 'sync';
+      background.src = 'materials/spring-bg.png';
+      background.draggable = false;
+      poster.append(background);
+    }
     $('editorial-colors').hidden = selectedTheme !== 'editorial';
     renderCustomControls();
     poster.style.setProperty('--columns', format.columns);
@@ -177,6 +189,15 @@
       const slot = text('div', 'poster-cover-slot', '');
       const frame = text('div', 'poster-cover', '');
       frame.append(text('span', 'cover-placeholder', '♪'));
+      if (theme.id === 'spring' && state.art !== 'text') {
+        const frameImage = new Image();
+        frameImage.className = 'spring-card-frame';
+        frameImage.alt = '';
+        frameImage.decoding = 'sync';
+        frameImage.src = `materials/frame-${[3, 7, 9][(rank - 1) % 3]}.png`;
+        frameImage.draggable = false;
+        frame.append(frameImage);
+      }
       const url = item.album?.cover;
       if (state.art !== 'text' && url && (/^https?:\/\//.test(url) || /^data:image\//.test(url))) {
         const image = new Image(); image.alt = item.album?.name || item.name || '专辑封面'; image.referrerPolicy = 'no-referrer';

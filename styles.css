@@ -321,3 +321,41 @@
   font-size: .92cqw;
   line-height: 1.1;
 }
+
+/* Use real image layers for seasonal artwork so SnapDOM can embed them
+   consistently across Safari, mobile Chromium, and Edge. */
+.poster--spring {
+  background-image:
+    radial-gradient(ellipse 9% 3.5% at 81% 10%, #fffdf0 56%, #fffdf0dd 72%, transparent 100%),
+    linear-gradient(#fffdf0d8, #fffdf0d8);
+  background-color: #fbf8ee;
+}
+.poster--spring .spring-poster-background {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  /* Match the former linear-gradient(#fffdf0d8, ..., url(bg)) treatment. */
+  opacity: .16;
+  pointer-events: none;
+  user-select: none;
+}
+.poster--spring .poster-cover {
+  background-image: none !important;
+}
+.poster--spring .poster-cover .spring-card-frame {
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  pointer-events: none;
+  user-select: none;
+}
