@@ -48,35 +48,98 @@ const THEMES = {
   },
 
   spring: {
-    name: '春日',
-    description: '樱花粉色系，柔和温暖',
-    background: '#fff5f7',
+    name: '春日拼贴',
+    kicker: 'SPRING PLAYLIST',
+    description: '水彩花卉拼贴风格',
+    background: '#f8f5f0',
     foreground: '#2a2a2a',
+    collageMode: true, // 标记为拼贴模式，卡片会随机旋转
 
     decorations: [
+      // 水彩花卉素材1 - 左上角
       {
-        type: 'svg',
-        position: 'top-right',
-        svg: `<svg width="200" height="200" style="position:absolute;top:-10px;right:-40px;opacity:0.3">
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#d36f83" stroke-width="1.5"/>
-          <circle cx="100" cy="100" r="95" fill="none" stroke="#d36f83" stroke-width="1.5"/>
-        </svg>`
+        type: 'image',
+        position: 'top-left',
+        src: 'materials/spring-material-1.png',
+        style: {
+          position: 'absolute',
+          left: '-5%',
+          top: '-8%',
+          width: '45%',
+          height: 'auto',
+          opacity: '0.85',
+          zIndex: 3,
+          pointerEvents: 'none',
+          mixBlendMode: 'multiply'
+        }
       },
+      // 水彩花卉素材2 - 右下角
+      {
+        type: 'image',
+        position: 'bottom-right',
+        src: 'materials/spring-material-2.png',
+        style: {
+          position: 'absolute',
+          right: '-10%',
+          bottom: '-5%',
+          width: '55%',
+          height: 'auto',
+          opacity: '0.75',
+          zIndex: 3,
+          pointerEvents: 'none',
+          mixBlendMode: 'multiply',
+          transform: 'rotate(15deg)'
+        }
+      },
+      // 手写标题装饰
       {
         type: 'text',
-        position: 'bottom-left',
-        content: '*',
+        position: 'title-decoration',
+        content: 'SPRING',
         style: {
-          fontSize: '2rem',
-          color: '#d36f83aa',
-          fontFamily: 'serif',
           position: 'absolute',
-          left: '2.4rem',
-          bottom: '5.5rem'
+          left: '5%',
+          top: '8%',
+          fontSize: '8cqw',
+          fontFamily: 'serif',
+          fontWeight: '300',
+          fontStyle: 'italic',
+          color: '#6b9b4d',
+          opacity: '0.15',
+          letterSpacing: '0.05em',
+          zIndex: 2,
+          pointerEvents: 'none',
+          textTransform: 'uppercase'
         }
+      },
+      // 笔触装饰
+      {
+        type: 'svg',
+        position: 'brush-strokes',
+        svg: `<svg width="100%" height="100%" style="position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0.12" xmlns="http://www.w3.org/2000/svg">
+          <!-- 黄色笔触 -->
+          <path d="M 15% 25% Q 25% 23% 35% 25%" stroke="#f4d03f" stroke-width="18" fill="none" stroke-linecap="round" opacity="0.6"/>
+          <path d="M 60% 15% Q 70% 13% 80% 16%" stroke="#f4d03f" stroke-width="15" fill="none" stroke-linecap="round" opacity="0.5"/>
+
+          <!-- 绿色笔触 -->
+          <path d="M 10% 70% Q 15% 68% 20% 70%" stroke="#7cb87c" stroke-width="20" fill="none" stroke-linecap="round" opacity="0.6"/>
+          <path d="M 75% 80% Q 85% 78% 92% 82%" stroke="#7cb87c" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.5"/>
+        </svg>`
+      },
+      // 纸张纹理
+      {
+        type: 'pattern',
+        position: 'texture',
+        svg: `<svg width="100%" height="100%" style="position:absolute;inset:0;pointer-events:none;opacity:0.03;z-index:1" xmlns="http://www.w3.org/2000/svg">
+          <filter id="paper-texture">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="1"/>
+            <feColorMatrix type="saturate" values="0"/>
+          </filter>
+          <rect width="100%" height="100%" filter="url(#paper-texture)" fill="#d4c5b0"/>
+        </svg>`
       }
     ],
-    availableFilters: ['soft-glow', 'bloom']
+    availableFilters: ['vintage', 'grain']
   },
 
   summer: {
@@ -267,29 +330,40 @@ function applyTheme(posterElement, themeKey, filters = []) {
 
   // Add decorations
   theme.decorations.forEach((decor, index) => {
-    const element = document.createElement('div');
-    element.className = 'theme-decoration';
-    element.dataset.decorationType = decor.type;
-    element.dataset.decorationIndex = index;
+    let element;
 
-    if (decor.type === 'line') {
-      Object.assign(element.style, {
-        position: 'absolute',
-        ...decor.style
-      });
-    } else if (decor.type === 'svg') {
-      element.innerHTML = decor.svg;
-      element.style.position = 'absolute';
-      element.style.inset = '0';
-      element.style.pointerEvents = 'none';
-    } else if (decor.type === 'pattern') {
-      if (decor.svg) {
+    if (decor.type === 'image') {
+      element = document.createElement('img');
+      element.src = decor.src;
+      element.alt = '';
+      element.className = 'theme-decoration';
+      element.draggable = false;
+      Object.assign(element.style, decor.style || {});
+    } else {
+      element = document.createElement('div');
+      element.className = 'theme-decoration';
+      element.dataset.decorationType = decor.type;
+      element.dataset.decorationIndex = index;
+
+      if (decor.type === 'line') {
+        Object.assign(element.style, {
+          position: 'absolute',
+          ...decor.style
+        });
+      } else if (decor.type === 'svg') {
         element.innerHTML = decor.svg;
+        element.style.position = 'absolute';
+        element.style.inset = '0';
+        element.style.pointerEvents = 'none';
+      } else if (decor.type === 'pattern') {
+        if (decor.svg) {
+          element.innerHTML = decor.svg;
+        }
+        Object.assign(element.style, decor.style || {});
+      } else if (decor.type === 'text') {
+        element.textContent = decor.content;
+        Object.assign(element.style, decor.style || {});
       }
-      Object.assign(element.style, decor.style || {});
-    } else if (decor.type === 'text') {
-      element.textContent = decor.content;
-      Object.assign(element.style, decor.style || {});
     }
 
     posterElement.appendChild(element);

@@ -7,3 +7,4 @@ dist/
 *.annual.json
 
 .venv/
+ref/
