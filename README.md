@@ -73,6 +73,30 @@ python3 -m venv .venv
 
 Chromium 与 WebKit 回归覆盖：两主题、三比例、PNG/JPG、四页 ZIP、图片位置和像素检查、歌曲／专辑、纯文字海报、手动新建、用户上传、配色、IndexedDB 恢复、工程文件离线重开、缺封面仍保存、TXT。未单独验证 Safari 发布版和 Firefox。
 
+## 开发与版本管理
+
+从 `v1.0.0` 开始维护版本日志，具体记录见 [CHANGELOG.md](CHANGELOG.md)。此前的提交历史不回溯整理。
+
+- `develop` 用于日常开发。修复、小幅样式调整和实验性改动先在这里提交。
+- `main` 只保留可发布状态，并继续作为 GitHub Pages 的发布分支。
+- 主题更新、重大 bug 修复和新功能完成后，先更新 `CHANGELOG.md`，再将 `develop` 合并到 `main`。
+- 正式版本使用语义化版本号：破坏性变更递增主版本，功能更新递增次版本，兼容性修复递增补丁版本；发布时创建对应的 `vX.Y.Z` 标签。
+
+日常流程：
+
+```bash
+git switch develop
+git add <files>
+git commit -m "Describe the change"
+
+# 准备发布时
+git switch main
+git merge --no-ff develop
+git tag v1.1.0
+git push origin main --tags
+git switch develop
+```
+
 ## JavaScript Worker（网易云）
 
 `workers/netease-importer.js` 是不依赖 Python 的 Cloudflare Worker：读取歌单完整 `trackIds` 并分批查询详情，也代理歌曲／专辑候选搜索。当前线上页面默认连接 `https://annual-playlist-netease.cookie4830.workers.dev`；其他部署可在浏览器控制台设置 `localStorage.setItem('annual-playlist:backend', 'https://你的-worker.workers.dev')`。部署前要配置 Worker 的 CORS、频率限制、请求数量上限，并确认网易云网页接口和平台条款允许你的使用场景。网易云搜索使用的是网页相关接口，不是承诺稳定的开放 API，结果字段或可用性可能变化。Worker 不保存用户歌单或 API key。
