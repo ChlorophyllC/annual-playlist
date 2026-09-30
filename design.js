@@ -32,9 +32,19 @@
     container.replaceChildren();
     const score = Number(value || 0);
     for (let index = 1; index <= 5; index++) {
-      const star = text('span', 'rating-star', '★');
-      if (score >= index) star.classList.add('is-full');
-      else if (score >= index - .5) star.classList.add('is-half');
+      const star = text('span', 'rating-star', '');
+      const shape = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      shape.setAttribute('viewBox', '0 0 24 24'); shape.setAttribute('aria-hidden', 'true');
+      const base = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      base.setAttribute('d', 'm12 2 3.1 6.3 7 .0-5.1 4.9 1.2 7-6.2-3.3-6.2 3.3 1.2-7L2 8.3l7-.0z');
+      const fill = base.cloneNode(); fill.classList.add('rating-star-fill');
+      // Set the crop inline, not just via .is-full/.is-half class rules: SnapDOM
+      // does not reliably capture a class-selector clip-path on an SVG child.
+      const fraction = score >= index ? 1 : score >= index - .5 ? .5 : 0;
+      fill.style.clipPath = `inset(0 ${(1 - fraction) * 100}% 0 0)`;
+      shape.append(base, fill); star.append(shape);
+      if (fraction === 1) star.classList.add('is-full');
+      else if (fraction === .5) star.classList.add('is-half');
       container.append(star);
     }
   }
@@ -178,7 +188,14 @@
     });
     const footer = text('div', 'poster-footer', '');
     footer.append(editable('span', '', 'SELECTED WITH LOVE', 'footer', '页脚'), editable('span', '', `${String(page + 1).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`, `page:${page}`, '当前页码文案'));
-    poster.append(head, grid, footer); $('poster-mount').replaceChildren(poster); scaleRatingBadges(poster);
+    const decorationVariants = {
+      spring: ['ring', 'dots'], summer: ['sun', 'stripes'], autumn: ['border', 'leaf'],
+      winter: ['border', 'snow'], editorial: ['grain'],
+    }[theme.id] || [];
+    const decorations = text('div', 'poster-decorations', '');
+    decorations.setAttribute('aria-hidden', 'true');
+    decorations.append(...decorationVariants.map(variant => text('span', `theme-decoration theme-decoration--${theme.id}-${variant}`, '')));
+    poster.append(decorations, head, grid, footer); $('poster-mount').replaceChildren(poster); scaleRatingBadges(poster);
     (state.customElements || []).forEach(element => {
       if (element.scope === 'page' && Number(element.page) !== page + 1) return;
       const node = element.kind === 'text' ? text('div', 'custom-poster-element custom-poster-text', element.text || '') : new Image();
@@ -392,6 +409,10 @@
     } finally { page = originalPage; render(); }
     return {title, snapshots};
   };
+  // Export needs to switch the live poster to each page in turn so SnapDOM
+  // captures the right DOM, then restore whatever the user was viewing.
+  window.getPosterPage = () => page;
+  window.setPosterPage = value => { page = value; render(); };
   $('reset-poster-text').addEventListener('click', () => {
     if (!data) return;
     delete state.textEdits[editKey()];

@@ -4,181 +4,40 @@
   const downloads = document.getElementById('export-downloads');
   let downloadURL;
 
-  // Freeze browser-measured geometry, not HTML. Safari does not reliably
-  // rasterize foreignObject (positioned covers disappear and scaling is lost).
-  function snapshot(poster) {
-    const bounds = poster.getBoundingClientRect();
-    const relative = element => {
-      const r = element.getBoundingClientRect();
-      return {x: r.left - bounds.left, y: r.top - bounds.top, width: r.width, height: r.height};
-    };
-    const rootStyle = getComputedStyle(poster);
-    const boxes = [], images = [], texts = [], custom = [];
-    function box(element) {
-      const style = getComputedStyle(element), rect = relative(element);
-      boxes.push({...rect, color: style.backgroundColor, border: parseFloat(style.borderTopWidth) || 0, borderColor: style.borderTopColor});
-    }
+  // Only cover URLs are needed ahead of capture, to prefetch art through
+  // ChartAssets (covers may be cross-origin and need CORS-safe copies).
+  function coverURLs(poster) {
     const includeCovers = document.getElementById('export-art')?.value !== 'text';
-    for (const frame of includeCovers ? poster.querySelectorAll('.poster-cover') : []) {
-      box(frame);
-      const image = frame.querySelector('img');
-      if (image) images.push({...relative(frame), url: image.src, fit: getComputedStyle(image).objectFit});
-    }
-    const selectors = '.poster-kicker,.poster-title,.poster-subtitle span,.poster-song,.poster-artist,.poster-rank,.poster-footer span';
-    for (const element of poster.querySelectorAll(selectors)) {
-      if (!element.getClientRects().length) continue;
-      const style = getComputedStyle(element);
-      const matrix = new DOMMatrix(style.transform === 'none' ? undefined : style.transform);
-      const angle = Math.atan2(matrix.b, matrix.a);
-      const savedTransform = element.style.transform;
-      // Measure line boxes without rotation, then apply the same rotation to
-      // the whole text block on Canvas, including its border/background.
-      element.style.transform = 'none';
-      try {
-        const rect = relative(element);
-        const lines = [];
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-        while (walker.nextNode()) {
-          const node = walker.currentNode;
-          let offset = 0;
-          for (const character of node.textContent) {
-            const range = document.createRange();
-            range.setStart(node, offset); offset += character.length; range.setEnd(node, offset);
-            const r = range.getBoundingClientRect();
-            if (!r.height || !r.width) continue;
-            const previous = lines.at(-1);
-            const x = r.left - bounds.left, y = r.top - bounds.top;
-            if (previous && Math.abs(previous.y - y) < 1) previous.text += character;
-            else lines.push({x, y, height: r.height, text: character});
-          }
-        }
-        texts.push({...rect, angle, lines, font: `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`,
-          fontSize: parseFloat(style.fontSize), spacing: style.letterSpacing === 'normal' ? '0px' : style.letterSpacing,
-          color: style.color, background: style.backgroundColor, opacity: Number(style.opacity),
-          border: parseFloat(style.borderTopWidth) || 0, borderColor: style.borderTopColor,
-          ellipsis: style.textOverflow === 'ellipsis', uppercase: style.textTransform === 'uppercase'});
-      } finally { element.style.transform = savedTransform; }
-    }
-    for (const element of poster.querySelectorAll('.custom-poster-element')) {
-      const style = getComputedStyle(element), rect = relative(element);
-      const matrix = new DOMMatrix(style.transform === 'none' ? undefined : style.transform);
-      custom.push({x: rect.x, y: rect.y, width: rect.width, height: rect.height, url: element.tagName === 'IMG' ? element.src : '', text: element.tagName === 'IMG' ? '' : element.textContent, font: `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`, color: style.color, angle: Math.atan2(matrix.b, matrix.a) || 0});
-    }
-    box(poster.querySelector('.poster-footer'));
-    const theme = [...poster.classList].find(value => value.startsWith('poster--'))?.replace('poster--', '') || 'gallery';
-    return {width: bounds.width, height: bounds.height, background: rootStyle.backgroundColor, theme,
-      texture: poster.classList.contains('poster--editorial'), boxes, images, texts, custom};
+    const images = includeCovers ? [...poster.querySelectorAll('.poster-cover img')].map(image => ({url: image.src})) : [];
+    return {images};
   }
 
-  function asDataURL(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob);
-    });
+  async function snapdomExport(poster, longEdge, format, covers) {
+    const snap = window.snapdom || window.snapDOM;
+    if (typeof snap !== 'function') throw new Error('snapdom 未加载');
+    const images = [...poster.querySelectorAll('img')];
+    const original = images.map(image => ({image, src: image.getAttribute('src'), crossOrigin: image.getAttribute('crossorigin')}));
+    try {
+      for (const image of images) {
+        const source = image.currentSrc || image.src;
+        if (covers.has(source)) { image.crossOrigin = 'anonymous'; image.src = covers.get(source); }
+      }
+      await Promise.all(images.map(image => image.decode?.().catch(() => {}) || Promise.resolve()));
+      await document.fonts.ready;
+      const bounds = poster.getBoundingClientRect();
+      const scale = longEdge / Math.max(bounds.width, bounds.height);
+      const result = await snap(poster, {scale, backgroundColor: getComputedStyle(poster).backgroundColor, embedFonts: true, embedImages: true});
+      const canvas = result instanceof HTMLCanvasElement ? result : await result.toCanvas?.();
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error('snapdom 未返回画布');
+      const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      return await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('snapdom 图片编码失败')), mime, .94));
+    } finally {
+      for (const item of original) {
+        if (item.src == null) item.image.removeAttribute('src'); else item.image.setAttribute('src', item.src);
+        if (item.crossOrigin == null) item.image.removeAttribute('crossorigin'); else item.image.setAttribute('crossorigin', item.crossOrigin);
+      }
+    }
   }
-  async function loadImage(src) {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      const timer = setTimeout(() => { image.src = ''; reject(new Error('图片渲染超时，请重试')); }, 30000);
-      image.onload = () => { clearTimeout(timer); resolve(image); };
-      image.onerror = () => { clearTimeout(timer); reject(new Error('图片解码失败，请重试')); };
-      image.src = src;
-    });
-  }
-  async function rasterize(snapshot, longEdge, format, covers) {
-    const {width, height, theme} = snapshot;
-    const scale = longEdge / Math.max(width, height);
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('浏览器无法创建图片画布');
-    context.scale(canvas.width / width, canvas.height / height);
-    context.fillStyle = snapshot.background; context.fillRect(0, 0, width, height);
-    context.save();
-    if (theme === 'spring') {
-      context.strokeStyle = '#d36f8355'; context.lineWidth = Math.max(1, width * .001);
-      context.beginPath(); context.arc(width * 1.04, -height * .01, width * .16, 0, Math.PI * 2); context.stroke();
-      context.beginPath(); context.arc(width * 1.04, -height * .01, width * .19, 0, Math.PI * 2); context.stroke();
-      context.fillStyle = '#d36f83aa'; context.font = `${Math.max(10, width * .035)}px serif`; context.fillText('*', width * .035, height * .94);
-    } else if (theme === 'summer') {
-      context.fillStyle = '#e56e3520'; context.translate(width * .5, height * .5); context.rotate(-Math.PI / 5);
-      for (let x = -width; x < width; x += width * .06) context.fillRect(x, -height, width * .012, height * 2);
-      context.setTransform(1, 0, 0, 1, 0, 0); context.fillStyle = '#f3a43b'; context.beginPath(); context.arc(width * 1.04, -height * .01, width * .17, 0, Math.PI * 2); context.fill();
-    } else if (theme === 'autumn') {
-      context.strokeStyle = '#b5533666'; context.lineWidth = Math.max(1, width * .001); context.strokeRect(width * .018, height * .018, width * .964, height * .964);
-      context.fillStyle = '#b55336d9'; context.save(); context.translate(width * .9, height * .13); context.rotate(.28);
-      context.beginPath(); context.moveTo(0, -height * .055); context.lineTo(width * .012, -height * .018); context.lineTo(width * .045, -height * .03); context.lineTo(width * .032, height * .008); context.lineTo(width * .07, height * .025); context.lineTo(width * .032, height * .04); context.lineTo(width * .045, height * .075); context.lineTo(width * .012, height * .055); context.lineTo(0, height * .095); context.lineTo(-width * .012, height * .055); context.lineTo(-width * .045, height * .075); context.lineTo(-width * .032, height * .04); context.lineTo(-width * .07, height * .025); context.lineTo(-width * .032, height * .008); context.lineTo(-width * .045, -height * .03); context.lineTo(-width * .012, -height * .018); context.closePath(); context.fill(); context.restore();
-    } else if (theme === 'winter') {
-      context.strokeStyle = '#6ca9b833'; context.lineWidth = Math.max(1, width * .0008);
-      for (let x = width * .08; x < width; x += width * .08) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
-      for (let y = height * .08; y < height; y += height * .08) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke(); }
-      context.fillStyle = '#28748faa'; context.font = `${Math.max(8, width * .015)}px serif`; context.fillText('*  ·  *  ·  *', width * .78, height * .055);
-    }
-    context.restore();
-    function drawBox(box, color = box.color) {
-      context.fillStyle = color; context.fillRect(box.x, box.y, box.width, box.height);
-      if (box.border) { context.fillStyle = box.borderColor; context.fillRect(box.x, box.y, box.width, box.border); }
-    }
-    for (const box of snapshot.boxes) drawBox(box);
-    for (const cover of snapshot.images) {
-      if (!covers.has(cover.url)) continue;
-      const image = await loadImage(covers.get(cover.url));
-      const factor = (cover.fit === 'contain' ? Math.min : Math.max)(cover.width / image.naturalWidth, cover.height / image.naturalHeight);
-      const w = image.naturalWidth * factor, h = image.naturalHeight * factor;
-      context.save(); context.beginPath(); context.rect(cover.x, cover.y, cover.width, cover.height); context.clip();
-      context.drawImage(image, cover.x + (cover.width - w) / 2, cover.y + (cover.height - h) / 2, w, h); context.restore();
-    }
-    for (const text of snapshot.texts) {
-      context.save(); context.globalAlpha = text.opacity;
-      if (text.angle) {
-        const cx = text.x + text.width / 2, cy = text.y + text.height / 2;
-        context.translate(cx, cy); context.rotate(text.angle); context.translate(-cx, -cy);
-      }
-      drawBox(text, text.background);
-      context.font = text.font; context.fillStyle = text.color;
-      context.textBaseline = 'alphabetic'; context.letterSpacing = text.spacing;
-      for (const line of text.lines) {
-        let value = text.uppercase ? line.text.toUpperCase() : line.text;
-        if (text.ellipsis && context.measureText(value).width > text.width) {
-          const chars = Array.from(value);
-          while (chars.length && context.measureText(chars.join('') + '…').width > text.width) chars.pop();
-          value = chars.join('') + '…';
-        }
-        const metrics = context.measureText(value);
-        const ascent = metrics.fontBoundingBoxAscent ?? text.fontSize * .8;
-        const descent = metrics.fontBoundingBoxDescent ?? text.fontSize * .2;
-        const baseline = line.y + (line.height - ascent - descent) / 2 + ascent;
-        context.fillText(value, line.x, baseline);
-      }
-      context.restore();
-    }
-    for (const item of snapshot.custom || []) {
-      context.save();
-      const cx = item.x + item.width / 2, cy = item.y + item.height / 2;
-      context.translate(cx, cy); context.rotate(item.angle || 0); context.translate(-cx, -cy);
-      if (item.url) {
-        try { const image = await loadImage(item.url); context.drawImage(image, item.x, item.y, item.width, item.height); } catch (_) {}
-      } else if (item.text) {
-        context.font = item.font; context.fillStyle = item.color; context.textBaseline = 'top'; context.fillText(item.text, item.x, item.y, item.width);
-      }
-      context.restore();
-    }
-    if (snapshot.texture) {
-      // Deterministic paper grain; Canvas-native so WebKit need not render an SVG filter.
-      const grain = document.createElement('canvas'); grain.width = grain.height = 160;
-      const g = grain.getContext('2d'), pixels = g.createImageData(160, 160);
-      let seed = 73;
-      for (let i = 0; i < pixels.data.length; i += 4) {
-        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-        pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = seed & 255; pixels.data[i + 3] = 10;
-      }
-      g.putImageData(pixels, 0, 0); context.fillStyle = context.createPattern(grain, 'repeat'); context.fillRect(0, 0, width, height);
-    }
-    return new Promise((resolve, reject) => canvas.toBlob(blob => {
-      canvas.width = canvas.height = 1;
-      if (blob) resolve(blob); else reject(new Error('图片编码失败，请降低分辨率重试'));
-    }, `image/${format}`, 0.94));
-  }
-
   // ZIP STORE: the PNG/JPG payload is already compressed. One download avoids
   // browser restrictions on automatically downloading several files.
   function crc32(bytes) {
@@ -216,7 +75,7 @@
       const longEdge = Number(document.getElementById('export-quality').value);
       const all = document.getElementById('export-scope').value === 'all';
       await document.fonts.ready;
-      const {title, snapshots} = window.captureChartPages(all, snapshot);
+      const {title, snapshots} = window.captureChartPages(all, coverURLs);
       const urls = [...new Set(snapshots.flatMap(page => page.images.map(image => image.url)))];
       const covers = new Map(); let completed = 0;
       // Limit concurrency and fail explicitly rather than silently exporting missing art.
@@ -233,11 +92,19 @@
       if (failed) throw failed.reason;
       const safeTitle = (title || '年度歌单').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 70);
       const files = [];
+      const originalPage = window.getPosterPage();
       for (const page of snapshots) {
         status.textContent = `正在生成第 ${page.page} 页…`;
-        const blob = await rasterize(page, longEdge, format, covers);
+        if (all) {
+          window.setPosterPage(page.page - 1);
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }
+        const poster = document.querySelector('#poster-mount .poster');
+        if (!poster) throw new Error('未找到可导出的海报');
+        const blob = await snapdomExport(poster, longEdge, format, covers);
         files.push({name: `${safeTitle}-${String(page.page).padStart(2, '0')}.${format === 'jpeg' ? 'jpg' : 'png'}`, blob});
       }
+      window.setPosterPage(originalPage);
       const blob = all ? await zip(files) : files[0].blob;
       if (downloadURL) URL.revokeObjectURL(downloadURL);
       downloadURL = URL.createObjectURL(blob);
