@@ -18,59 +18,7 @@ const THEMES = {
     foreground: '#2a2a2a',
 
     decorations: [
-      // Top border - double line
-      {
-        type: 'line',
-        position: 'top-outer',
-        style: {
-          position: 'absolute',
-          height: '1px',
-          background: '#2a2a2a',
-          top: '2.2rem',
-          left: '2.4rem',
-          right: '2.4rem'
-        }
-      },
-      {
-        type: 'line',
-        position: 'top-inner',
-        style: {
-          position: 'absolute',
-          height: '1px',
-          background: '#2a2a2a',
-          top: '2.6rem',
-          left: '2.4rem',
-          right: '2.4rem',
-          opacity: '0.35'
-        }
-      },
-      // Bottom border - double line
-      {
-        type: 'line',
-        position: 'bottom-inner',
-        style: {
-          position: 'absolute',
-          height: '1px',
-          background: '#2a2a2a',
-          bottom: '4.6rem',
-          left: '2.4rem',
-          right: '2.4rem',
-          opacity: '0.35'
-        }
-      },
-      {
-        type: 'line',
-        position: 'bottom-outer',
-        style: {
-          position: 'absolute',
-          height: '1px',
-          background: '#2a2a2a',
-          bottom: '4.2rem',
-          left: '2.4rem',
-          right: '2.4rem'
-        }
-      },
-      // Subtle corner marks
+      // Corner marks
       {
         type: 'svg',
         position: 'corners',
