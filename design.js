@@ -140,7 +140,7 @@
     $('album-summary').textContent = `从 ${data.items.length} 首歌曲提取 ${items.length} 张专辑，按首次出现排序。${chart.unresolved.length ? `${chart.unresolved.length} 首缺少专辑信息，未纳入专辑榜；可在下方导入列表查看。` : ''}${items.some(item => item.artistSource === 'tracks') ? '部分音乐人来自已导入歌曲，可能不是完整专辑署名，可点击修改。' : ''}`;
     $('poster-title').value = edits().title ?? defaultTitle();
     $('poster-signature').value = edits().signature ?? 'MY YEAR IN MUSIC';
-    const theme = selectedTheme === 'spring' ? {id:'spring', name:'春日新芽', kicker:'SOUNDS IN BLOOM'} : selectedTheme === 'summer' ? {id:'summer', name:'盛夏唱片', kicker:'A BRIGHTER SIDE OF THE YEAR'} : selectedTheme === 'autumn' ? {id:'autumn', name:'秋日唱片', kicker:'THE SEASON OF SLOW LISTENING'} : selectedTheme === 'winter' ? {id:'winter', name:'冬夜蓝调', kicker:'A QUIET ARCHIVE OF SOUND'} : themes.find(t => t.id === selectedTheme) || themes[0];
+    const theme = selectedTheme === 'spring' ? {id:'spring', name:'春日新芽', kicker:'SOUNDS IN BLOOM'} : selectedTheme === 'summer' ? {id:'summer', name:'盛夏唱片', kicker:'A BRIGHTER SIDE OF THE YEAR'} : selectedTheme === 'autumn' ? {id:'autumn', name:'秋日唱片', kicker:'THE SEASON OF SLOW LISTENING'} : selectedTheme === 'winter' ? {id:'winter', name:'冬夜蓝调', kicker:'A QUIET ARCHIVE OF SOUND'} : (window.THEMES && window.THEMES[selectedTheme]) ? {...themes.find(t => t.id === selectedTheme), kicker: window.THEMES[selectedTheme].kicker} : themes.find(t => t.id === selectedTheme) || themes[0];
     const format = state.art === 'text' ? {columns: state.ratio === 'wide' ? 3 : 2, rows: 12} : formats[state.ratio], count = format.columns * format.rows;
     const pages = Math.max(1, Math.ceil(items.length / count));
     page = Math.max(0, Math.min(page, pages - 1));

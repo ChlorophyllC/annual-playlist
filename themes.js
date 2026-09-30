@@ -12,6 +12,7 @@ const PLAYLIST_THEMES = [
 const THEMES = {
   gallery: {
     name: '封面画廊',
+    kicker: 'A GALLERY OF SOUND',
     description: '经典画廊风格，适合展示专辑封面',
     background: '#f5f1e8',
     foreground: '#2a2a2a',
@@ -99,6 +100,7 @@ const THEMES = {
 
   editorial: {
     name: '出版物',
+    kicker: 'EDITORIAL SELECTION',
     description: '杂志编辑风格，强调排版',
     // Editorial theme uses CSS variables set by design.js, don't override
     background: null,
