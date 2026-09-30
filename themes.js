@@ -18,17 +18,6 @@ const THEMES = {
     foreground: '#2a2a2a',
 
     decorations: [
-      // Corner marks
-      {
-        type: 'svg',
-        position: 'corners',
-        svg: `<svg width="100%" height="100%" style="position:absolute;inset:0;pointer-events:none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="2.4%" y1="8.5%" x2="4.2%" y2="8.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
-          <line x1="95.8%" y1="8.5%" x2="97.6%" y2="8.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
-          <line x1="2.4%" y1="91.5%" x2="4.2%" y2="91.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
-          <line x1="95.8%" y1="91.5%" x2="97.6%" y2="91.5%" stroke="#2a2a2a" stroke-width="1" opacity="0.5"/>
-        </svg>`
-      },
       // Light texture overlay
       {
         type: 'pattern',
